@@ -1,0 +1,14 @@
+{
+  "name": "cantus-panel",
+  "version": "0.4.0",
+  "private": true,
+  "description": "A calm workspace for Codex and Claude conversations. Portable, disconnected by default.",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node --test conversation-tree.test.cjs lineage.test.cjs routing.test.cjs handoff.test.cjs panel-runner.test.cjs portable.test.cjs ui-regression.test.cjs",
+    "check:privacy": "node scripts/check-privacy.cjs",
+    "start:gateway": "node cloud/gateway.cjs"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "codexHome": "/absolute/path/to/your/codex-profile",
+  "claudeConfig": "/absolute/path/to/your/claude-profile",
+  "claudeDesktop": "/absolute/path/to/your/claude-desktop-data",
+  "codexBin": "/absolute/path/to/your/codex-executable",
+  "claudeBin": "/absolute/path/to/your/claude-executable",
+  "workRoot": "/absolute/path/to/your/workspace"
+}

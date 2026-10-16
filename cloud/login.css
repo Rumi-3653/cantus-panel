@@ -14,7 +14,7 @@ button{display:flex;justify-content:center;align-items:center;gap:14px;width:100
 @media(max-width:480px){body{padding:28px 20px}.login-card{padding:22px 22px 8px}.entry-caption{font-size:7px;letter-spacing:.6px}.sparkles span:nth-child(1){left:8%;top:12%}.sparkles span:nth-child(2){left:90%;top:26%}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}.creature-parade{will-change:auto}}
 @media(prefers-reduced-transparency:reduce){.login-card{background:#f7fafb;backdrop-filter:none}.mist{display:none}}
-.creature{pointer-events:auto;cursor:pointer;touch-action:manipulation}
+.creature{pointer-events:auto;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .creature .blush{fill:#f28caa;opacity:0;pointer-events:none;transition:opacity .16s ease}
 .creature.is-blushing .blush{opacity:1}
 @media(prefers-reduced-motion:reduce){.creature .blush{transition:none}}

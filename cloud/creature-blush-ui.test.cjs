@@ -18,6 +18,7 @@ for(const surface of ['login','inside'])test(surface+' four independent blush re
   });
   await page.goto('https://fixture.example.test/'+(surface==='login'?'login':''));
   const selector=surface==='login'?'.creature':'.frame-creature',sprites=page.locator(selector);await sprites.first().waitFor();assert.equal(await sprites.count(),4);
+  assert.equal(await sprites.first().evaluate(e=>getComputedStyle(e).webkitTapHighlightColor),'rgba(0, 0, 0, 0)');
   const input=surface==='login'?page.getByLabel('帳號',{exact:true}):page.locator('#search');await input.fill('保留輸入');
   const flags=()=>sprites.evaluateAll(es=>es.map(e=>e.classList.contains('is-blushing')));
   for(let i=0;i<4;i++){

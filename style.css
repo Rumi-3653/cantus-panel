@@ -111,7 +111,7 @@ body{padding-top:42px}
 .cantus-organize-dialog .composer-actions{margin:4px 0 0;padding:16px 0 0;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:12px}
 .cantus-organize-dialog .composer-actions button{min-height:44px;padding:10px 18px;line-height:1.5;flex:none}
 @media(max-width:480px){.cantus-organize-dialog{padding:22px 20px}.cantus-organize-dialog h2{font-size:19px}}
-.frame-creature{pointer-events:auto;cursor:pointer;touch-action:manipulation}
+.frame-creature{pointer-events:auto;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .frame-creature .blush{fill:#f28caa;opacity:0;pointer-events:none;transition:opacity .16s ease}
 .frame-creature.is-blushing .blush{opacity:1}
 @media(prefers-reduced-motion:reduce){.frame-creature .blush{transition:none}}

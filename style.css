@@ -95,3 +95,8 @@ body{padding-top:42px}
 .frame-creature .body{fill:#fff}.frame-creature .eyes{fill:#00a8b8}
 .lineage-host{font-size:12px;color:#008fa5;margin:0 0 10px}
 @media(prefers-reduced-motion:reduce){.frame-creature-parade,.frame-creature{will-change:auto}}
+.new-cantus-folder{margin:0 18px 10px;padding:8px 12px;border:1px solid #acd5dd;border-radius:9px;background:#f6fcfd;color:#287b8a;text-align:left;cursor:pointer}
+.cantus-context-menu{position:fixed;z-index:100;width:180px;padding:5px;background:#f4fafc;border:1px solid #bdd5df;border-radius:10px;box-shadow:0 6px 24px #35536130}
+.cantus-context-menu[hidden]{display:none}.cantus-context-menu button{display:block;width:100%;padding:10px;text-align:left;border:0;background:transparent;color:#233749;border-radius:7px;cursor:pointer}.cantus-context-menu button:hover,.cantus-context-menu button:focus{background:#dceff3}
+.cantus-organize-dialog,.pair-dispatch-dialog{width:min(520px,calc(100vw - 32px));box-sizing:border-box;border:1px solid #bdd5df;border-radius:16px;padding:24px;background:#f3fafc;color:#233749}.cantus-organize-dialog::backdrop,.pair-dispatch-dialog::backdrop{background:#20384755}
+.cantus-organize-dialog input,.cantus-organize-dialog select,.pair-dispatch-dialog input,.pair-dispatch-dialog textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid #adcdd6;border-radius:8px;background:#fff;color:#233749;font:inherit}.pair-dispatch-dialog textarea{min-height:140px;resize:vertical}.pair-dispatch-dialog label{display:block;margin:14px 0}.organize-error{color:#9e3434;white-space:pre-wrap}.pair-result{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;max-height:360px;overflow:auto}.pair-host-badge{font-size:11px;color:#087e93}

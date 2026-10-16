@@ -2,9 +2,9 @@
 // Optional single-workspace HTTPS entry. No tunnels or machine inventory.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {LabStore,fail}=require('../lab/store.cjs');
-const assets=new Set(['index.html','app.js','style.css','native-ui.js','conversation-tree.js','platform-ui.js','routing-rules.js','routing-ui.js','live-ui.js','live.css','lineage-ui.js','lineage.css']);
-const read=new Set(['sessions','history','native/capability','native/status','routing/settings','routing/models','live','lineage']);
-const write=new Set(['native/create','native/send','native/answer','native/stop','routing/settings','routing/preview','lineage']);
+const assets=new Set(['index.html','app.js','style.css','native-ui.js','conversation-tree.js','platform-ui.js','routing-rules.js','routing-ui.js','live-ui.js','live.css','lineage-ui.js','lineage.css','organize-ui.js','pair-ui.js']);
+const read=new Set(['sessions','history','native/capability','native/status','routing/settings','routing/models','live','lineage','pair']);
+const write=new Set(['native/create','native/send','native/answer','native/stop','routing/settings','routing/preview','lineage','pair']);
 async function body(req){let parts=[],size=0;for await(const chunk of req){size+=chunk.length;if(size>131072)throw fail('請求太大',413);parts.push(chunk);}return Buffer.concat(parts);}
 function request(port,url,method,data,headers){return new Promise((resolve,reject)=>{
  const r=http.request({hostname:'127.0.0.1',port,path:url,method,headers},s=>{const chunks=[];let size=0;s.on('data',p=>{size+=p.length;if(size>16777216)r.destroy(Error('response limit'));else chunks.push(p);});s.on('end',()=>resolve({status:s.statusCode,body:Buffer.concat(chunks)}));s.on('error',reject);});r.setTimeout(45000,()=>r.destroy(Error('timeout')));r.on('error',reject);r.end(data);
@@ -28,9 +28,9 @@ function createGateway({store,domain,port=4589,upstream=request}={}){
    let user;try{user=store.auth(token);}catch{if(p==='/'&&req.method==='GET')return send(303,'','text/plain',{Location:'/login'});throw fail('請重新登入',401);}
    if(req.method==='POST'&&(req.headers['x-cantus-token']!==csrf(token)||(p!=='/auth/logout'&&user.role!=='editor')))throw fail('拒絕未授權操作',403);
    if(p==='/auth/logout'&&req.method==='POST'){store.logout(token);return send(200,{ok:true},'application/json',{'Set-Cookie':'__Host-cantus=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'});}
-   if(p==='/api/bootstrap'&&req.method==='GET')return send(200,{csrf:csrf(token),routing:true,workspace:{authenticated:true,role:user.role}});
+   if(p==='/api/bootstrap'&&req.method==='GET'){let pair=false;try{const boot=await upstream(port,'/api/bootstrap','GET',undefined,{Host:'127.0.0.1:'+port});pair=boot.status===200&&JSON.parse(boot.body).pair===true;}catch{}return send(200,{csrf:csrf(token),routing:true,pair,workspace:{authenticated:true,role:user.role}});}
    const file=p==='/'?'index.html':p.slice(1);if(req.method==='GET'&&assets.has(file))return send(200,fs.readFileSync(path.join(__dirname,'..',file)),file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8');
-   if(!p.startsWith('/api/')||!(req.method==='GET'?read:write).has(p.slice(5)))throw fail('找不到功能',404);
+   if(!p.startsWith('/api/')||!(req.method==='GET'?read:write).has(p.slice(5).replace(/^m1\//,'')))throw fail('找不到功能',404);
    const data=req.method==='POST'?await body(req):undefined,headers={Host:'127.0.0.1:'+port,'Content-Type':'application/json'};
    if(req.method==='POST'){const boot=await upstream(port,'/api/bootstrap','GET',undefined,headers);if(boot.status!==200)throw Error('upstream unavailable');headers.Origin='http://127.0.0.1:'+port;headers['X-Cantus-Token']=JSON.parse(boot.body).csrf;}
    const result=await upstream(port,p+url.search,req.method,data,headers);if(req.method==='POST')store.audit(user.name,p,'',result.status);return send(result.status,result.body);

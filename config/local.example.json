@@ -4,5 +4,6 @@
   "claudeDesktop": "/absolute/path/to/your/claude-desktop-data",
   "codexBin": "/absolute/path/to/your/codex-executable",
   "claudeBin": "/absolute/path/to/your/claude-executable",
-  "workRoot": "/absolute/path/to/your/workspace"
+  "workRoot": "/absolute/path/to/your/workspace",
+  "pairRole": "disabled"
 }

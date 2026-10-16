@@ -8,7 +8,7 @@ window.cantusOpenWork=async target=>{
  const ticket=++workNavigation;
  try{
   const desired=target.platform==='cloud'?(target.machine||target.host):'local',platform=window.cantusPlatform;
-  if(desired!=='local'&&desired!==platform?.host)return false;
+  if(desired!=='local'&&desired!==platform?.host&&!(desired==='m1'&&platform?.activate))return false;
   const current=platform?.mode==='cloud'?platform.host||'local':'local';
   if(current!==desired){if(!platform?.activate){toast('請先切換到此工作的主機');return false;}await platform.activate(desired);}
   if(ticket!==workNavigation)return false;
@@ -30,8 +30,8 @@ async function api(url){const generation=window.cantusPlatform?.generation;if(ur
 function visible(){return catalog.sessions.filter(s=>filter==='all'||filter==='projects'||filter===s.provider||filter==='today'&&new Date(s.updatedAt).toDateString()===new Date().toDateString());}
 function visibleProjects(){return (catalog.projects||[]).filter(p=>filter==='all'||filter==='projects'||filter===p.provider);}
 function renderList(revealId){
- $('projectCount').textContent=CantusConversations.build(catalog.sessions,{projects:catalog.projects||[]}).filter(g=>g.kind==='project').length;
- const list=$('list'),scroll=list.scrollTop,query=$('search').value,groups=CantusConversations.build(visible(),{query,projects:visibleProjects()}),scope=window.cantusPlatform?.key('conversation-tree')||'local';
+ $('projectCount').textContent=CantusConversations.build(catalog.sessions,{projects:catalog.projects||[],folders:catalog.cantusFolders||[]}).filter(g=>g.kind==='project').length;
+ const list=$('list'),scroll=list.scrollTop,query=$('search').value,groups=CantusConversations.build(visible(),{query,projects:visibleProjects(),folders:catalog.cantusFolders||[]}),scope=window.cantusPlatform?.key('conversation-tree')||'local';
  list.replaceChildren();$('listCount').textContent=`${groups.reduce((sum,g)=>sum+g.count,0).toLocaleString()} 段會話`;$('listTitle').textContent=filter==='today'?'今天':filter==='codex'?'Codex':filter==='claude'?'Claude':'專案與會話';
  const contains=n=>n.session.id===revealId||n.children.some(contains);
  function branch(n,depth=0){
@@ -43,7 +43,7 @@ function renderList(revealId){
  const groupContains=g=>g.roots.some(contains)||(g.subgroups||[]).some(groupContains);
  function groupView(g,topLevel=true){
   const project=g.kind==='project',codex=project&&g.provider==='codex',key=scope+':group:'+g.key,details=el('details','conversation-group'+(topLevel?' folder-group':'')+(codex?' codex-project':'')),summary=el('summary'),title=el('span','conversation-group-title',g.name),count=el('span','conversation-count',String(g.count)),body=el('div','conversation-group-body');
-  details.dataset.groupKey=g.key;summary.title=g.path||g.source||g.name;
+  details.dataset.groupKey=g.key;if(g.cantusFolderId)details.dataset.cantusFolderId=g.cantusFolderId;summary.title=g.path||g.source||g.name;
   if(topLevel){const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('class','conversation-folder');icon.setAttribute('aria-hidden','true');for(const [state,d]of [['open','M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 7h16a2 2 0 0 1 2 3l-3 9H5a2 2 0 0 1-2-2Z'],['closed','M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z']]){const line=document.createElementNS(icon.namespaceURI,'path');line.setAttribute('class','folder-'+state);line.setAttribute('d',d);icon.append(line);}summary.append(icon);}
   summary.append(title);if(project&&g.provider)summary.append(el('span','conversation-provider',g.provider==='codex'?'Codex':'Claude'));summary.append(count);
   const opened=!!query.trim()||groupContains(g)||(conversationOpen.has(key)?conversationOpen.get(key):project&&g.defaultExpanded!==false);if(revealId&&groupContains(g))conversationOpen.set(key,true);details.open=!!opened;summary.onclick=e=>{e.preventDefault();details.open=!details.open;conversationOpen.set(key,details.open);};

@@ -9,19 +9,34 @@ class LineageStore{
  snapshot(sessions,handoffs){
   const data=this.read(),origins=data.origins||[],members=new Set([...handoffs.values()].flatMap(r=>Object.values(r.members).filter(id=>id!==r.id))),map=new Map(sessions.filter(s=>!members.has(s.id)).map(s=>[s.id,s]));
   for(const r of handoffs.values())map.set(r.id,{...r.entry,id:r.id,handoff:true});
-  const referenced=new Set([...data.edges.flatMap(e=>[e.from,e.to]),...origins]);
+  const referenced=new Set([...data.edges.flatMap(e=>[e.from,e.to]),...origins,...Object.keys(data.titles||{}),...Object.keys(data.memberships||{})]);
   const nodes=[...map.values()].filter(s=>!backgroundReason(s)||referenced.has(s.id)).map(s=>({id:s.id,title:(s.title||s.projectName||'未命名工作').slice(0,300),sessionId:s.id,provider:s.provider,source:s.source||'原始對話',status:'unknown',handoffs:[]}));
   nodes.push(...data.tasks.map(t=>({...t,status:'unknown',source:'手動建立的工作',handoffs:[]})));
   for(const n of nodes){const r=handoffs.get(n.id);if(!r)continue;let previous=r.entry.provider;n.handoffs=(r.deliveries||[]).flatMap((d,index)=>{const from=previous;previous=d.provider;if(from===d.provider)return [];return [{from,to:d.provider,phase:d.phase,sequence:index+1,requestId:d.requestId,evidence:'state/handoffs/'+r.id+'.json · deliveries['+index+']'}];});}
   const known=new Set(nodes.map(n=>n.id));for(const id of referenced)if(!known.has(id))nodes.push({id,title:'來源已不可讀 · '+id.slice(0,22),status:'unknown',missing:true,source:'既有關係保留；無法確認對話',handoffs:[]});
-  for(const n of nodes)n.isOrigin=origins.includes(n.id);
-  return {revision:data.revision,nodes,edges:data.edges,scope:'local',note:'只呈現本機面板的明確紀錄與手動關係。工作是否完成尚無驗收資料，均標未知；依賴不會自動執行或解鎖。'};
+  for(const n of nodes){n.isOrigin=origins.includes(n.id);if(Object.hasOwn(data.titles||{},n.id)){n.originalTitle=n.title;n.title=data.titles[n.id];}}
+  return {revision:data.revision,nodes,edges:data.edges,folders:data.folders||[],scope:'local',note:'只呈現本機面板的明確紀錄與手動關係。工作是否完成尚無驗收資料，均標未知；依賴不會自動執行或解鎖。'};
  }
  mutate(body,sessions,handoffs){
   const data=this.read();if(body.revision!==data.revision)throw fail('關係已更新，請重新讀取後再操作',409);
   const now=new Date().toISOString();data.origins ||= [];
   if(body.action==='createTask'){const title=clean(body.title,300);if(!title)throw fail('請輸入 1–300 字的工作名稱');if(data.tasks.length>=2000)throw fail('手動工作已達 2,000 筆上限');data.tasks.push({id:'work_'+crypto.randomUUID(),title,createdAt:now});}
-  else if(body.action==='setOrigin'){
+  else if(body.action==='createFolder'){
+   const title=clean(body.title,100);if(!title)throw fail('請輸入 1–100 字的資料夾名稱');data.folders ||= [];
+   if(data.folders.length>=200)throw fail('資料夾已達 200 個上限');if(data.folders.some(f=>f.name===title))throw fail('已有同名資料夾',409);
+   data.folders.push({id:'folder_'+crypto.randomUUID(),name:title});
+  }else if(body.action==='renameFolder'){
+   const title=clean(body.title,100),folder=data.folders?.find(f=>f.id===body.id);if(!title||!folder)throw fail('資料夾或名稱無效');
+   if(data.folders.some(f=>f.id!==body.id&&f.name===title))throw fail('已有同名資料夾',409);folder.name=title;
+  }else if(body.action==='moveFolder'){
+   if(!sessions.some(s=>s.id===body.id)&&!handoffs.has(body.id))throw fail('找不到對話',404);
+   if(body.folderId!==null&&!data.folders?.some(f=>f.id===body.folderId))throw fail('找不到資料夾',404);
+   data.memberships={...data.memberships};if(body.folderId===null)delete data.memberships[body.id];else data.memberships[body.id]=body.folderId;
+  }else if(body.action==='rename'){
+   const title=clean(body.title,300),node=this.snapshot(sessions,handoffs).nodes.find(n=>n.id===body.id)||sessions.find(s=>s.id===body.id)||handoffs.get(body.id)?.entry;
+   if(!title)throw fail('請輸入 1–300 字的名稱');if(!node||node.missing)throw fail('找不到工作，請重新讀取',404);
+   data.titles={...data.titles,[body.id]:title};
+  }else if(body.action==='setOrigin'){
    if(typeof body.enabled!=='boolean')throw fail('起始來源標記無效');
    const node=this.snapshot(sessions,handoffs).nodes.find(n=>n.id===body.id);if(!node||node.missing)throw fail('找不到工作，請重新讀取');
    if(body.enabled&&data.edges.some(e=>e.to===body.id))throw fail('此工作已有來源或前置連線；連線已保留，不能同時設為起始來源',409);
@@ -46,5 +61,7 @@ class LineageStore{
   data.revision++;const tmp=path.join(this.root,'graph-'+crypto.randomUUID()+'.tmp');fs.writeFileSync(tmp,JSON.stringify(data)+'\n',{mode:0o600});fs.renameSync(tmp,file);
   return this.snapshot(sessions,handoffs);
  }
+ names(sessions){const data=this.read(),titles=data.titles||{};return sessions.map(s=>{const folder=data.folders?.find(f=>f.id===data.memberships?.[s.id]);return {...s,...(Object.hasOwn(titles,s.id)?{originalTitle:s.originalTitle||s.title,title:titles[s.id]}:{}),...(folder?{cantusFolder:folder}:{})};});}
+ catalog(value){return {...value,sessions:this.names(value.sessions),cantusFolders:this.read().folders||[]};}
 }
 module.exports={LineageStore};

@@ -22,10 +22,10 @@ test('Lineage uses current workspace and discards old reads and pending writes',
  vm.runInContext(fs.readFileSync('lineage-ui.js','utf8'),f.ctx);f.nodes.lineage.onclick();await flush();
  const root=f.nodes.app.children[0],left=root.children[0],find=(node,cls)=>node.children.find(x=>x.className===cls);
  assert.equal(find(left,'lineage-items').children[0].children[0].textContent,'示範 A');
- f.platform.fetch=()=>new Promise(r=>releaseRead=r);f.nodes.lineage.onclick();
+ f.platform.fetch=()=>new Promise(r=>releaseRead=r);f.nodes.lineage.onclick();await flush();
  f.platform.host='fixture-b';f.platform.label='示範 B';f.platform.fetch=async(_url,options)=>{calls.push({host:f.platform.host,method:options?.method||'GET'});return {ok:true,json:async()=>graph('示範 B')};};f.events['cantus-platform-change']();await flush();
  releaseRead({ok:true,json:async()=>graph('過期 A')});await flush();assert.equal(find(left,'lineage-items').children[0].children[0].textContent,'示範 B');
- f.ctx.fetch=()=>new Promise(r=>releaseBootstrap=r);const form=find(left,'lineage-create');form.children[0].value='不能跨工作區';const pending=form.onsubmit({preventDefault(){}});
+ let hold=true;f.ctx.fetch=()=>{if(hold){hold=false;return new Promise(r=>releaseBootstrap=r);}return Promise.resolve({ok:true,json:async()=>({csrf:'fixture'})});};const form=find(left,'lineage-create');form.children[0].value='不能跨工作區';const pending=form.onsubmit({preventDefault(){}});
  f.platform.host='fixture-c';f.events['cantus-platform-change']();await flush();releaseBootstrap({json:async()=>({csrf:'fixture'})});await pending;assert.equal(calls.filter(c=>c.method==='POST').length,0);
  f.ctx.fetch=async()=>({json:async()=>({csrf:'fixture'})});const current=find(left,'lineage-create');current.children[0].value='本工作區';await current.onsubmit({preventDefault(){}});assert.equal(calls.filter(c=>c.method==='POST').length,1);assert.equal(calls.at(-1).host,'fixture-c');
  f.platform.role='viewer';f.events['cantus-platform-change']();await flush();assert.equal(find(left,'lineage-create').children[1].disabled,true);

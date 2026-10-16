@@ -21,7 +21,7 @@ window.cantusOpenWork=async target=>{
   if(gen!==platform?.generation||ticket!==workNavigation)return false;
   if(matches.length!==1){toast('找不到唯一對應的原對話；保留唯讀詳情，不建立新 session。');return false;}
   const s=matches[0];if(!catalog.sessions.some(x=>x.id===s.id))catalog.sessions.push(s);
-  $('work').click();if(selected!==s.id)await select(s);else renderList(s.id);return true;
+  $('work').click();if(selected!==s.id)await select(s);else renderList(s.id);document.dispatchEvent(new Event('cantus-work-opened'));return true;
  }catch(e){toast(e.message);return false;}
 };
 const conversationOpen=new Map();
@@ -121,7 +121,7 @@ async function select(s){
   }
   try{const h=await api(base);if(seq===request)showPage(h);}catch(e){if(seq===request)body.replaceChildren(el('div','empty',e.message));}
 }
-async function load(refresh=false){$('refresh').disabled=true;$('connection').textContent='正在讀取來源';try{catalog=await api('/api/sessions'+(refresh?'?refresh=1':''));$('allCount').textContent=catalog.sessions.length;$('projectCount').textContent=CantusConversations.build(catalog.sessions).filter(g=>g.kind==='project').length;$('todayCount').textContent=catalog.sessions.filter(s=>new Date(s.updatedAt).toDateString()===new Date().toDateString()).length;$('providers').replaceChildren();$('warnings').replaceChildren();for(const p of ['codex','claude'])$(p+'Count').textContent='—';for(const p of catalog.providers){$(p.provider+'Count').textContent=p.count;const c=el('div','glass-card'),d=el('div');d.append(el('strong','',p.provider==='codex'?'Codex':'Claude'),el('p','',p.supported?'來源索引已讀取':'無法讀取'));c.append(el('span','source-icon',p.provider==='codex'?'C':'✳'),d,el('span','source-number',p.count));$('providers').append(c);for(const w of p.warnings||[])$('warnings').append(el('p','',w));}renderList();$('connection').textContent=catalog.demo?'虛構資料示範 · 未連接帳號':`${catalog.providers.filter(p=>p.supported).length} 個來源已連接`;if(catalog.demo){document.querySelector('.sidebar-bottom').textContent='虛構資料示範 · 不會呼叫 AI';document.querySelector('.edition').textContent='DEMO';document.querySelector('.inspector .glass-card p').textContent='未連接任何帳號';};if(refresh&&selected){const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s);}}catch(e){$('connection').textContent='連接失敗';$('list').replaceChildren(el('div','empty',e.message));}finally{$('refresh').disabled=false;}}
+async function load(refresh=false){$('refresh').disabled=true;$('connection').textContent='正在讀取來源';try{catalog=await api('/api/sessions'+(refresh?'?refresh=1':''));$('allCount').textContent=catalog.sessions.length;$('projectCount').textContent=CantusConversations.build(catalog.sessions).filter(g=>g.kind==='project').length;$('todayCount').textContent=catalog.sessions.filter(s=>new Date(s.updatedAt).toDateString()===new Date().toDateString()).length;$('providers').replaceChildren();$('warnings').replaceChildren();for(const p of ['codex','claude'])$(p+'Count').textContent='—';for(const p of catalog.providers){$(p.provider+'Count').textContent=p.count;const c=el('div','glass-card'),d=el('div');d.append(el('strong','',p.provider==='codex'?'Codex':'Claude'),el('p','',p.supported?'來源索引已讀取':'無法讀取'));c.append(el('span','source-icon',p.provider==='codex'?'C':'✳'),d,el('span','source-number',p.count));$('providers').append(c);for(const w of p.warnings||[])$('warnings').append(el('p','',w));}renderList();$('connection').textContent=catalog.demo?'虛構資料示範 · 未連接帳號':`${catalog.providers.filter(p=>p.supported).length} 個來源已連接`;if(catalog.demo){document.querySelector('.sidebar-bottom').textContent='虛構資料示範 · 不會呼叫 AI';document.querySelector('.edition').textContent='DEMO';document.querySelector('.inspector .glass-card p').textContent='未連接任何帳號';};if(refresh&&selected){const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s,{background:true});}}catch(e){$('connection').textContent='連接失敗';$('list').replaceChildren(el('div','empty',e.message));}finally{$('refresh').disabled=false;}}
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===b));renderList();});$('search').oninput=renderList;$('refresh').onclick=()=>load(true);document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();$('search').focus();}});$('work').onclick=()=>{filter='all';renderList();};$('lineage').onclick=()=>toast('目前以右側來源與專案位置呈現脈絡；跨會話關聯尚未接入。');$('live').onclick=()=>toast('選取會話後可在下方續聊、確認權限及停止面板啟動的回合。');load();
 // Decorative companions stay outside the clipped frame; petting only changes their cheeks.
 (()=>{
@@ -153,3 +153,102 @@ document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.da
  function reset(){cancelAnimationFrame(animation);place();draw(performance.now());}
  new ResizeObserver(reset).observe(frame);motion.addEventListener('change',reset);document.addEventListener('visibilitychange',reset);window.addEventListener('resize',reset);reset();
 })();
+/* Mobile navigation keeps the original conversation DOM, draft and request ownership. */
+document.addEventListener('DOMContentLoaded',()=>{
+ const app=document.querySelector('.app'),header=app?.querySelector('header');if(!header)return;
+ const media=matchMedia('(max-width:780px), (max-width:1024px) and (max-height:600px) and (pointer:coarse)'),sidebar=document.querySelector('.sidebar'),inspector=document.querySelector('.inspector');
+ const create=document.querySelector('.panel-create'),createHome=document.createComment('create position');
+ const sidebarHome=document.createComment('sidebar position'),inspectorHome=document.createComment('inspector position');
+ sidebar.before(sidebarHome);inspector.before(inspectorHome);create?.before(createHome);
+ const button=(label,cls,text=label)=>{const b=el('button',cls,text);b.type='button';b.setAttribute('aria-label',label);return b;};
+ const back=button('返回會話清單','mobile-back','‹'),title=el('div','mobile-title'),heading=el('strong','','會話'),host=el('small');
+ title.append(heading,host);
+ const workspace=button('工作區與設定','mobile-workspace','工作區'),more=button('對話資訊與操作','mobile-info','更多');
+ header.append(back,title,workspace,more);
+ const nav=el('nav','mobile-nav');nav.setAttribute('aria-label','主要功能');
+ const tabs=[['work','會話'],['lineage','工作關係'],['live','工作動態']];
+ for(const [id,label]of tabs){const b=button(label,'mobile-tab');b.dataset.view=id;b.onclick=()=>$(id).click();nav.append(b);}app.append(nav);
+ function sheet(label){
+  const d=el('dialog','mobile-sheet'),bar=el('div','mobile-sheet-heading'),h=el('h2','',label),close=button('關閉'+label,'','關閉');
+  d.setAttribute('aria-label',label);close.onclick=()=>d.close();bar.append(h,close);d.append(bar);document.body.append(d);
+  d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();});
+  return d;
+ }
+ const workspaceSheet=sheet('工作區與設定'),infoSheet=sheet('對話資訊與操作'),actions=el('div','mobile-info-actions'),permission=el('p','mobile-permission');
+ const rename=button('重新命名目前對話','','重新命名'),move=button('移動目前對話','','移至資料夾');
+ actions.append(rename,move);infoSheet.append(actions,permission);
+ workspace.onclick=()=>workspaceSheet.showModal();
+ more.onclick=()=>{permission.textContent=document.querySelector('.composer>.native-note')?.textContent||'';const editable=!!window.CantusOrganize?.editable();rename.disabled=move.disabled=!editable;infoSheet.showModal();};
+ rename.onclick=()=>{const s=catalog.sessions.find(s=>s.id===selected);if(!s)return;infoSheet.close();window.CantusOrganize?.edit({title:'重新命名對話',value:name(s),action:'rename',id:s.id});};
+ move.onclick=()=>{const s=catalog.sessions.find(s=>s.id===selected);if(!s)return;infoSheet.close();window.CantusOrganize?.edit({title:'移至 Cantus 資料夾',action:'moveFolder',id:s.id,folderId:s.cantusFolder?.id});};
+ let view='list',replaying=false,historyReady=false;
+ function updateHeader(){
+  const picker=document.querySelector('.platform-box select');
+  host.textContent=picker?.selectedOptions[0]?.textContent||'目前工作區';
+  heading.textContent=view==='chat'?(catalog.sessions.find(s=>s.id===selected)?name(catalog.sessions.find(s=>s.id===selected)):'對話'):view==='lineage'?'工作關係':view==='live'?'工作動態':'會話';
+  back.hidden=view!=='chat';more.hidden=view!=='chat';
+  for(const b of nav.children){const active=b.dataset.view===(view==='list'||view==='chat'?'work':view);b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');}
+ }
+ function show(next,record=true){
+  if(!media.matches)return;
+  if(record&&!replaying&&view!==next)history.pushState({...history.state,cantusMobileView:next},'');
+  view=next;app.dataset.mobileView=view;updateHeader();
+ }
+ for(const [id]of tabs)$(id).addEventListener('click',()=>show(id==='work'?'list':id));
+ back.onclick=()=>{if(history.state?.cantusMobileView==='chat')history.back();else show('list',false);};
+ window.addEventListener('popstate',e=>{
+  if(!media.matches)return;const next=e.state?.cantusMobileView||'list';
+  replaying=true;$(next==='lineage'||next==='live'?next:'work').click();show(next==='chat'&&selected?'chat':next==='chat'?'list':next,false);replaying=false;
+ });
+ function fitInput(input){if(!media.matches||!input)return;input.style.height='auto';input.style.height=Math.min(input.scrollHeight,Math.max(64,(window.visualViewport?.height||innerHeight)*.22),128)+'px';}
+ function compactComposer(){
+  const box=document.querySelector('.composer');if(!media.matches||!box||box.querySelector('.mobile-composer-tools'))return;
+  const tools=button('展開輸入選項','mobile-composer-tools','＋'),controls=el('div','mobile-composer-controls');
+  tools.setAttribute('aria-expanded','false');tools.onclick=()=>{const open=box.classList.toggle('mobile-tools-open');tools.setAttribute('aria-expanded',String(open));tools.setAttribute('aria-label',open?'收合輸入選項':'展開輸入選項');};
+  for(const control of box.querySelectorAll('.provider-picker,.stop-message'))controls.append(control);
+  box.prepend(tools);box.append(controls);const input=box.querySelector('textarea');input.dataset.desktopRows=String(input.rows);input.rows=1;fitInput(input);
+ }
+ const priorSelect=select;
+ select=async(s,options={})=>{if(media.matches&&!options.background){show('chat');heading.textContent=name(s);}const result=await priorSelect(s);if(selected===s.id){compactComposer();updateHeader();}return result;};
+ document.addEventListener('cantus-work-opened',()=>{if(selected)show('chat');});
+ document.addEventListener('input',e=>{if(e.target.matches('.composer textarea'))fitInput(e.target);});
+ // Touch-accessible menus reuse the same Cantus-only rename and move operations.
+ const observer=new MutationObserver(()=>{
+  if(!media.matches)return;
+  for(const row of document.querySelectorAll('.conversation-row:not([data-mobile-menu])')){
+   row.dataset.mobileMenu='true';const b=button('會話操作','mobile-row-more','⋯');b.onclick=e=>{e.stopPropagation();const r=b.getBoundingClientRect();row.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.bottom}));};row.append(b);
+  }
+  for(const summary of document.querySelectorAll('.conversation-group[data-cantus-folder-id]>summary:not([data-mobile-menu])')){
+   summary.dataset.mobileMenu='true';const b=button('資料夾操作','mobile-row-more','⋯');b.onclick=e=>{e.preventDefault();e.stopPropagation();const r=b.getBoundingClientRect();summary.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.bottom}));};summary.append(b);
+  }
+ });
+ observer.observe($('list'),{childList:true,subtree:true});
+ sidebar.addEventListener('click',e=>{if(!media.matches)return;if(e.target.closest('[data-filter]')){workspaceSheet.close();show('list');}if(e.target.closest('.routing-open'))workspaceSheet.close();});
+ document.addEventListener('cantus-platform-change',()=>{if(!media.matches)return;infoSheet.close();if(view==='chat'){show('list',false);history.replaceState({...history.state,cantusMobileView:'list'},'');}updateHeader();});
+ document.addEventListener('cantus-login-expired',()=>{if(media.matches){infoSheet.close();if(!workspaceSheet.open)workspaceSheet.showModal();updateHeader();}});
+ document.addEventListener('cantus-display-change',updateHeader);
+ let viewportFrame;
+ function viewport(){
+  cancelAnimationFrame(viewportFrame);viewportFrame=requestAnimationFrame(()=>{
+   if(!media.matches)return;const v=window.visualViewport;if(v&&v.scale!==1)return;
+   document.documentElement.style.setProperty('--cantus-mobile-height',(v?.height||innerHeight)+'px');
+   document.documentElement.style.setProperty('--cantus-mobile-top',(v?.offsetTop||0)+'px');
+   const keyboard=!!document.activeElement?.matches('textarea,input:not([type=checkbox]),select')&&(v?.height||innerHeight)<screen.height*.7;
+   app.classList.toggle('mobile-keyboard',keyboard);fitInput(document.querySelector('.composer textarea'));
+  });
+ }
+ function resize(){
+  if(media.matches){
+   workspaceSheet.append(sidebar);infoSheet.append(inspector);if(create)document.querySelector('.list-pane .search').after(create);
+   if(!historyReady){history.replaceState({...history.state,cantusMobileView:view},'');historyReady=true;}
+   show(app.classList.contains('lineage-mode')?'lineage':app.classList.contains('live-mode')?'live':selected?'chat':'list',false);compactComposer();renderList();viewport();
+  }else{
+   workspaceSheet.close();infoSheet.close();sidebarHome.after(sidebar);inspectorHome.after(inspector);if(create)createHome.after(create);delete app.dataset.mobileView;app.classList.remove('mobile-keyboard');
+   document.querySelectorAll('.composer textarea').forEach(e=>{e.style.removeProperty('height');if(e.dataset.desktopRows)e.rows=Number(e.dataset.desktopRows);});
+   for(const box of document.querySelectorAll('.composer')){const actions=box.querySelector('.composer-actions'),send=actions?.querySelector('.send-message');for(const control of box.querySelectorAll('.mobile-composer-controls>*'))actions.insertBefore(control,send);box.querySelector('.mobile-composer-controls')?.remove();box.querySelector('.mobile-composer-tools')?.remove();box.classList.remove('mobile-tools-open');}
+  }
+ }
+ media.addEventListener('change',resize);window.addEventListener('resize',viewport);window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);
+ document.addEventListener('focusin',viewport);document.addEventListener('focusout',viewport);
+ resize();
+});

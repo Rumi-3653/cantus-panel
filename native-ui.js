@@ -105,7 +105,7 @@ select=async function(s){
       const pending=pendingSends.get(draftKey);
       if(requestedPending!==pending?.requestId){nativePoll=setTimeout(poll,900);return;}
       if(pending&&pending.requestId!==v.requestId&&sending){nativePoll=setTimeout(poll,900);return;}
-      if(pending&&pending.requestId===v.requestId&&!v.busy&&v.phase==='completed'){pendingSends.delete(draftKey);await load(true);if(selected===s.id&&generation===nativeSelection)await select(catalog.sessions.find(x=>x.id===s.id)||s);}
+      if(pending&&pending.requestId===v.requestId&&!v.busy&&v.phase==='completed'){pendingSends.delete(draftKey);await load(true);if(selected===s.id&&generation===nativeSelection)await select(catalog.sessions.find(x=>x.id===s.id)||s,{background:true});}
       else{renderStatus(v);if(v.busy||messageQueues.get(draftKey)?.items.length)nativePoll=setTimeout(poll,900);}
     }catch(e){state.textContent='連線中斷，未自動重送。'+e.message;nativePoll=setTimeout(poll,2500);}finally{polling=false;}
   }

@@ -115,3 +115,135 @@ body{padding-top:42px}
 .frame-creature .blush{fill:#f28caa;opacity:0;pointer-events:none;transition:opacity .16s ease}
 .frame-creature.is-blushing .blush{opacity:1}
 @media(prefers-reduced-motion:reduce){.frame-creature .blush{transition:none}}
+/* Phone workspace: one screen at a time; desktop layout stays unchanged. */
+.mobile-back,.mobile-title,.mobile-workspace,.mobile-info,.mobile-nav,.mobile-row-more,.mobile-composer-tools,.mobile-composer-controls{display:none}
+.mobile-sheet{border:1px solid #c5dce3;border-radius:20px;background:#f5fafc;color:var(--ink);width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;overflow:auto}
+.mobile-sheet::backdrop{background:#20384766;backdrop-filter:blur(4px)}
+.mobile-sheet-heading{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;background:#f5fafc;z-index:2;border-bottom:1px solid var(--line)}
+.mobile-sheet-heading h2{font-size:19px}.mobile-sheet-heading button{min-height:44px;padding:10px}
+@media(max-width:780px),(max-width:1024px) and (max-height:600px) and (pointer:coarse){
+ html{height:100%;overscroll-behavior:none}
+ body{position:fixed;top:var(--cantus-mobile-top,0px);left:0;width:100%;height:var(--cantus-mobile-height,100dvh);padding:calc(32px + env(safe-area-inset-top)) 0 0;overflow:hidden}
+ body .app{height:100%;width:100%;grid-template-columns:minmax(0,1fr);grid-template-rows:60px minmax(0,1fr) calc(60px + env(safe-area-inset-bottom));border:0;border-radius:18px 18px 0 0;min-height:0;overflow:hidden}
+ body .app>header{grid-column:1;grid-row:1;padding:0 12px;gap:8px;min-width:0;background:#f3fafcf5}
+ body .app>header>.wordmark,body .app>header>.tabs,body .app>header>.connection{display:none}
+ body .app>header>.mobile-title{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+ .mobile-title strong{font-size:17px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mobile-title small{font-size:11px;color:#667f8b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body .app>header>.mobile-back,body .app>header>.mobile-workspace,body .app>header>.mobile-info{display:block;min-width:44px;min-height:44px;padding:8px;font-size:13px;border-radius:10px;flex:none}
+ body .app>header>.mobile-back{font-size:30px;padding:0;width:44px}
+ body .app>header>.mobile-workspace{color:#087d8c;background:#e3f2f5}
+ body .app [hidden],body .mobile-sheet [hidden]{display:none!important}
+ body .app>.sidebar,body .app>.inspector{display:none}
+ body .app>.list-pane{grid-row:2;grid-column:1;min-height:0;overflow:hidden;border:0;background:#f8fbfc}
+ body .app>.list-pane .pane-heading{padding:16px 16px 10px;gap:8px}
+ body .app>.list-pane .eyebrow{display:none}
+ body .app>.list-pane h2{font-size:20px}
+ body .app>.list-pane .icon-btn{height:44px;width:44px}
+ body .app>.list-pane .search{margin:0 14px 10px;padding:8px 12px;min-height:44px}
+ body .app>.list-pane .search input{font-size:16px;line-height:1.5}
+ body .app>.list-pane .panel-create{display:flex;gap:8px;margin:0 14px 8px;padding:0}
+ body .app>.list-pane .panel-create button{min-height:44px;flex:1;font-size:14px}
+ body .app>.list-pane .new-cantus-folder{margin:0 14px 8px;min-height:44px;font-size:14px;text-align:left}
+ body .app>.list-pane .list{min-height:0;flex:1;padding:0 10px 12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ body .app>.list-pane footer{flex:none;padding:8px 16px;font-size:11px}
+ body .app .conversation-group>summary{min-height:48px;padding:10px 8px;font-size:15px}
+ body .app .conversation-group-body{padding-left:8px}
+ body .app .conversation-row{min-width:0;align-items:center}
+ body .app .session{min-width:0;min-height:64px;padding:12px 8px}
+ body .app .session h3{font-size:15px;line-height:1.5}
+ body .app .conversation-meta{font-size:11px;line-height:1.5;flex-wrap:wrap}
+ body .app .branch-toggle{min-width:36px;min-height:44px}
+ body .app .branch-spacer{width:8px;flex:none}
+ body .app .mobile-row-more{display:block;flex:none;width:44px;min-height:44px;font-size:25px;color:#5d7e8c}
+ body .app>#detail{display:none;grid-row:2;grid-column:1;padding:0;min-height:0;min-width:0;background:#f6fafc}
+ body .app[data-mobile-view=chat]>.list-pane{display:none}
+ body .app[data-mobile-view=chat]>#detail{display:flex;flex-direction:column;overflow:hidden}
+ body .app[data-mobile-view=lineage]>.list-pane,body .app[data-mobile-view=live]>.list-pane{display:none}
+ body .app #detail>.transcript-scroll{flex:1;min-height:0;padding:14px 14px 20px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ body .app .transcript-scroll>.eyebrow,body .app .transcript-scroll>.detail-title,body .app .transcript-scroll>.meta-row{display:none}
+ body .app .conversation-heading{margin:4px 0 12px;font-size:12px}
+ body .app .message{max-width:94%;margin-bottom:20px;flex-shrink:0}
+ body .app .message.user{max-width:90%}
+ body .app .message-body{font-size:15px;line-height:1.85}
+ body .app .message-head{font-size:11px}
+ body .app .history-pages{flex-wrap:wrap;gap:8px}
+ body .app .history-pages button,body .app .message summary{min-height:44px;padding:10px}
+ body .app .composer{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:6px 8px;align-items:end;flex:none;width:100%;max-height:60%;overflow:auto;margin:0;padding:10px 12px;border:0;border-top:1px solid #dbe7ed;border-radius:0;background:#fcfefe}
+ body .app .composer>label{grid-column:2;grid-row:1;font-size:0;min-width:0}
+ body .app .composer textarea{display:block;width:100%;min-height:46px;max-height:128px;margin:0;padding:10px 12px;font-size:16px;line-height:24px;resize:none;border-radius:16px;overscroll-behavior:contain}
+ body .app .composer>.composer-actions{display:contents}
+ body .app .composer .send-message{grid-column:3;grid-row:1;min-width:60px;min-height:46px;padding:10px;font-size:14px;border-radius:14px}
+ body .app .composer .mobile-composer-tools{display:block;grid-column:1;grid-row:1;width:44px;height:46px;border-radius:14px;background:#eaf3f6;color:#567887;font-size:25px}
+ body .app .composer .native-state{grid-column:1/-1;font-size:11px;line-height:1.5;max-height:36px;overflow:auto}
+ body .app .composer .native-state:empty{display:none}
+ body .app .composer>.native-note,body .app .composer>.routing-chat-note{display:none}
+ body .app .composer.mobile-tools-open>.native-note,body .app .composer.mobile-tools-open>.routing-chat-note:not([hidden]){display:block;grid-column:1/-1;line-height:1.6;font-size:12px;margin:0;max-height:88px;overflow:auto}
+ body .app .composer .mobile-composer-controls{display:flex;grid-column:1/-1;gap:8px;align-items:center;justify-content:space-between}
+ body .app .composer .provider-picker{width:auto;max-width:60%;min-height:44px;font-size:16px;margin:0;padding:8px 30px 8px 10px}
+ body .app .composer .stop-message{min-height:44px;font-size:13px;padding:8px 12px}
+ body .app .composer .native-queue,body .app .composer .native-approvals{grid-column:1/-1;max-height:140px;overflow:auto;overscroll-behavior:contain}
+ body .app .composer .native-queue:empty,body .app .composer .native-approvals:empty{display:none}
+ body .app .composer .approval{margin-top:6px;padding:8px}
+ body .app .composer .approval p{margin:4px 0;font-size:13px;line-height:1.5}
+ body .app .composer .approval button,body .app .composer .native-queue>button{min-height:44px;font-size:13px}
+ body .app>.mobile-nav{display:flex;grid-row:3;grid-column:1;align-items:stretch;gap:6px;padding:6px 12px calc(6px + env(safe-area-inset-bottom));background:#f9fcfd;border-top:1px solid #d9e6ed}
+ body .app .mobile-tab{flex:1;min-width:0;min-height:46px;border-radius:12px;font-size:13px;color:#617a88}
+ body .app .mobile-tab.active{background:#dff2f5;color:#007e8e;font-weight:600}
+ body .app.mobile-keyboard{grid-template-rows:52px minmax(0,1fr)}
+ body .app.mobile-keyboard>.mobile-nav{display:none}
+ body .mobile-sheet{width:calc(100vw - 16px);max-height:calc(var(--cantus-mobile-height,100dvh) - 20px);margin:auto;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+ body .mobile-sheet>.sidebar{display:flex;padding:16px;min-width:0;border:0;background:transparent;overflow:visible}
+ body .mobile-sheet .intro{display:none}
+ body .mobile-sheet .platform-box{display:block;margin:0 0 16px;padding:0}
+ body .mobile-sheet .platform-box select,body .mobile-sheet .platform-box input{width:100%;min-width:0;min-height:48px;font-size:16px}
+ body .mobile-sheet .platform-box button{font-size:14px;min-height:44px;padding:10px 14px}
+ body .mobile-sheet .platform-box>.native-note{font-size:13px;line-height:1.6;margin:8px 0}
+ body .mobile-sheet .lab-login{display:flex;flex-direction:column;gap:12px;margin:14px 0}
+ body .mobile-sheet .nav{display:flex;min-height:48px;font-size:15px;margin:3px 0}
+ body .mobile-sheet .label{margin:16px 10px 6px}
+ body .mobile-sheet .sidebar-bottom{margin:16px 10px 0;padding:12px 0;font-size:12px}
+ body .mobile-sheet .sidebar-bottom p{display:flex;align-items:center;justify-content:space-between;margin:12px 0 0}
+ body .mobile-sheet .routing-open{width:48px;height:48px;font-size:20px}
+ body .mobile-sheet>.inspector{display:block!important;padding:16px;border:0;overflow:visible}
+ body .mobile-sheet .inspector input,body .mobile-sheet .inspector textarea{font-size:16px;width:100%;min-width:0}
+ body .mobile-sheet .inspector button,body .mobile-sheet .inspector summary{min-height:44px;padding:10px}
+ body .mobile-sheet .mobile-info-actions{display:flex;gap:10px;padding:16px}
+ body .mobile-sheet .mobile-info-actions button{flex:1;min-height:44px;padding:10px;background:#e6f3f6;border-radius:10px}
+ body .mobile-sheet .mobile-permission{padding:0 16px;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+ body .app>.lineage-view,body .app>.live-view{grid-row:2;grid-column:1;display:block;min-height:0;overflow:auto;overscroll-behavior:contain}
+ body .app .lineage-list{max-height:250px;overflow:auto;padding:16px;border-bottom:1px solid var(--line)}
+ body .app .lineage-list .eyebrow,body .app .lineage-list>h2{display:none}
+ body .app .lineage-center,body .app .lineage-inspector{padding:16px;overflow:visible;max-height:none;border:0}
+ body .app .lineage-inspector{border-top:1px solid var(--line)}
+ body .app .lineage-heading h1{font-size:19px;white-space:normal}
+ body .app .lineage-view input,body .app .lineage-view select,body .app .lineage-view textarea{font-size:16px;min-height:44px}
+ body .app .lineage-view button{min-height:44px}
+ body .app .lineage-item strong{font-size:14px}
+ body .app .lineage-graph{grid-template-columns:minmax(0,1fr);gap:12px;min-height:0;padding:12px 0;overflow:visible}
+ body .app .lineage-connectors{display:none}
+ body .app .lineage-column{padding:0;border:0}
+ body .app .lineage-column h4{margin:10px 0;font-size:13px}
+ body .app .lineage-node strong{font-size:15px}
+ body .app .lineage-node small,body .app .lineage-node span,body .app .lineage-inspector p{font-size:12px}
+ body .app .live-machines{display:flex;gap:8px;overflow:auto;padding:12px;align-items:stretch;border-bottom:1px solid var(--line)}
+ body .app .live-machines>.eyebrow,body .app .live-machines>h2{display:none}
+ body .app .live-machine{width:auto;min-width:120px;flex:none;min-height:48px;margin:0;padding:10px;font-size:13px}
+ body .app .live-board,body .app .live-inspector{padding:16px;overflow:visible;max-height:none;border:0}
+ body .app .live-heading h1{font-size:20px}
+ body .app .live-head{display:none}
+ body .app .live-machine-row{display:block;min-width:0;padding:16px 0;min-height:0}
+ body .app .live-machine-name{display:block;font-size:15px;padding:0 0 12px}
+ body .app .live-lane{margin:8px 0 16px}
+ body .app .live-lane::before{content:attr(data-label);font-size:12px;color:#627c89}
+ body .app .live-job{padding:14px;min-height:60px}
+ body .app .live-job strong{font-size:15px}.app .live-job small,.app .live-job span{font-size:12px}
+ body .app .live-inspector{border-top:1px solid var(--line)}
+ body .app .live-inspector .send-message,body .app .live-more{min-height:44px}
+ body .cantus-context-menu{left:12px!important;right:12px;top:auto!important;bottom:calc(74px + env(safe-area-inset-bottom));width:auto;max-height:50dvh;overflow:auto;padding:8px;border-radius:16px}
+ body .cantus-context-menu button{min-height:48px;padding:12px 16px;font-size:16px}
+ body dialog input,body dialog select,body dialog textarea{font-size:16px!important}
+ body .routing-dialog{max-height:calc(var(--cantus-mobile-height,100dvh) - 24px)}
+ body .routing-dialog button{min-height:44px}
+ #toast{bottom:calc(82px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px);width:max-content;z-index:20}
+}

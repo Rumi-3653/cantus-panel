@@ -1,11 +1,44 @@
 /* Native continuation UI; all provider text is rendered as text, never HTML. */
 const originalSelect=select,drafts=new Map(),pendingSends=new Map(),providerChoices=new Map();let nativePoll,csrfToken,nativeSelection=0;
+// Queues belong to this browser tab. Requests keep their original host/account.
+const messageQueues=new Map(),queueStorageKey='cantus-message-queues-v1';
+try{for(const [key,q] of JSON.parse(sessionStorage.getItem(queueStorageKey)||'[]'))if(q&&Array.isArray(q.items)&&q.items.length)messageQueues.set(key,{...q,paused:true,reason:'重新整理後已暫停，請確認後繼續。'});}catch{}
+function saveQueues(){try{sessionStorage.setItem(queueStorageKey,JSON.stringify([...messageQueues].filter(([,q])=>q.items.length).map(([key,q])=>[key,{id:q.id,items:q.items,waiting:q.waiting,paused:q.paused,reason:q.reason}])));}catch{}}
+function queueChanged(){saveQueues();document.dispatchEvent(new Event('cantus-queue-change'));}
+async function drainQueue(key,q){
+  if(q.working||q.paused||!q.items.length||!q.transport)return;
+  q.working=true;
+  try{
+    const v=await q.transport.get('/api/native/status?id='+encodeURIComponent(q.id));
+    if(q.paused||!q.items.length)return;
+    if(q.reason){q.reason='';queueChanged();}
+    const item=q.items[0];
+    if(item.submitting){
+      if(v.requestId===item.requestId){q.items.shift();q.waiting=v.requestId;queueChanged();return;}
+      q.paused=true;q.reason='上一則送出結果不明；請核對記錄，未自動重送。';queueChanged();return;
+    }
+    if(v.busy)return;
+    if(q.waiting&&(v.requestId!==q.waiting||v.phase!=='completed')){q.paused=true;q.reason='上一回合未正常完成，排隊已暫停。';queueChanged();return;}
+    item.submitting=true;queueChanged();
+    pendingSends.set(key,{...item,state:'正在送出…'});
+    try{
+      const sent=await q.transport.post({id:q.id,text:item.text,requestId:item.requestId,provider:item.provider,...(q.transport.revisions?{revision:v.revision}:{})});
+      q.items.shift();q.waiting=sent.requestId||item.requestId;
+      const pending=pendingSends.get(key);if(pending?.requestId===item.requestId)pending.state='已送出';queueChanged();
+    }catch(e){q.paused=true;q.reason='送出未確認；未自動重送。'+e.message;queueChanged();}
+  }catch(e){q.paused=[401,403].includes(e.status);q.reason=q.paused?'登入或權限已變更，請重新登入後繼續排隊。':'連線中斷，排隊保留；尚未送出。';queueChanged();}
+  finally{q.working=false;if(q.paused)queueChanged();}
+}
+setInterval(()=>{for(const [key,q] of messageQueues)void drainQueue(key,q);},900);
+addEventListener('beforeunload',e=>{if([...messageQueues.values()].some(q=>q.items.length)){e.preventDefault();e.returnValue='';}});
 const createBox=el('div','panel-create');
 for(const provider of ['auto','codex','claude']){const button=el('button','nav',provider==='auto'?'＋ 新對話':'＋ 新 '+(provider==='codex'?'Codex':'Claude')+' 對話');button.dataset.provider=provider;button.hidden=provider!=='auto';button.onclick=async()=>{for(const b of createBox.querySelectorAll('button'))b.disabled=true;const oldBox=document.querySelector('.composer');if(oldBox){for(const c of oldBox.querySelectorAll('textarea,button'))c.disabled=true;oldBox.querySelector('.native-state').textContent='正在建立新對話…';}try{const target=provider==='auto'?(window.cantusRouting?.config?.defaultTarget?.provider||'claude'):provider;const s=await postNative('create',{provider:target});await load();await select(s);}catch(e){toast(e.message);const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s);}finally{for(const b of createBox.querySelectorAll('button'))b.disabled=false;}};createBox.append(button);}
 document.querySelector('.sidebar').insertBefore(createBox,document.querySelector('.sources-label'));
 async function postNative(action,body){
+  const key=window.cantusPlatform?.key(body.id),generation=window.cantusPlatform?.generation;
   csrfToken ||= (await api('/api/bootstrap')).csrf;
-  if(window.cantusPlatform?.mode==='cloud'&&action==='send')body={...body,revision:Number(document.querySelector('.composer')?.dataset.labRevision)};
+  if(key!==window.cantusPlatform?.key(body.id)||generation!==window.cantusPlatform?.generation)throw Error('已切換平台，未送出。');
+  if(window.cantusPlatform?.mode==='cloud'&&window.cantusPlatform.host!=='m1'&&action==='send')body={...body,revision:Number(document.querySelector('.composer')?.dataset.labRevision)};
   const r=await (window.cantusPlatform?.fetch||fetch)('/api/native/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-Cantus-Token':csrfToken},body:JSON.stringify(body)});
   const value=await r.json();if(!r.ok)throw Error(value.error||'送出失敗');return value;
 }
@@ -26,23 +59,34 @@ select=async function(s){
   const actions=el('div','composer-actions'),send=el('button','send-message','送出'),stop=el('button','stop-message','停止本回合'),state=el('span','native-state',''),live=el('div','native-response'),approvals=el('div','native-approvals');live.setAttribute('aria-live','polite');
   const liveMessage=el('article','message assistant live-message'),liveHead=el('div','message-head');
   liveHead.append(el('span','mini-avatar','C'),el('span','',s.provider==='codex'?'Codex':'Claude'));live.classList.add('message-body');liveMessage.append(liveHead,live);liveMessage.hidden=true;transcript.append(liveMessage);
-  send.disabled=true;stop.hidden=true;actions.append(state,providerPicker,stop,send);label.append(input);box.append(note,label,routingNote,actions,approvals);$('detail').append(box);
+  const queueList=el('div','native-queue');queueList.setAttribute('aria-label','待送訊息');
+  send.disabled=true;stop.hidden=true;actions.append(state,providerPicker,stop,send);label.append(input);box.append(note,label,routingNote,actions,queueList,approvals);$('detail').append(box);
   transcript.scrollTop=transcript.scrollHeight;
   let optimistic;
   function showPending(p){
     if(!p)return;
+    if([...transcript.querySelectorAll('[data-request-id]')].some(a=>a.dataset.requestId===p.requestId))return;
     const persisted=[...transcript.querySelectorAll('.message.user')].some(a=>a.dataset.sentAt&&a.dataset.sentAt>=p.at&&a.messageText===p.text);
     if(persisted)return;
     optimistic=messageArticle({role:'user',text:p.text,at:p.at},s);optimistic.dataset.requestId=p.requestId;
     optimistic.append(el('small','delivery-state',p.state));transcript.insertBefore(optimistic,liveMessage);transcript.scrollTop=transcript.scrollHeight;
   }
   showPending(pendingSends.get(draftKey));
-  let available=false,busy=false,polling=false,sending=false,lastApproval='';
+  let available=false,busy=false,polling=false,sending=false,lastApproval='',lastStatus={};
+  function renderQueue(){
+    queueList.replaceChildren();const q=messageQueues.get(draftKey);if(!q?.items.length)return;
+    queueList.append(el('p','native-note',q.reason||'已排隊 '+q.items.length+' 則 · 保持此分頁開啟，完成後依序送出。'));
+    for(const item of q.items){const row=el('div','approval'),text=el('p','',item.text),cancel=el('button','',item.submitting?'移除待確認項目':'取消排隊');text.style.whiteSpace='pre-wrap';text.style.overflowWrap='anywhere';cancel.disabled=q.working&&item.submitting;cancel.onclick=()=>{q.items=q.items.filter(x=>x!==item);queueChanged();};row.append(text,cancel);queueList.append(row);}
+    if(q.paused&&!q.items.some(x=>x.submitting)){const resume=el('button','','繼續排隊');resume.onclick=()=>{q.transport=queueTransport();q.paused=false;q.waiting=null;q.reason='';queueChanged();void drainQueue(draftKey,q);};queueList.append(resume);}
+  }
+  function queueTransport(){return window.cantusPlatform.capture();}
+  const queueListener=()=>{if(!box.isConnected){document.removeEventListener('cantus-queue-change',queueListener);return;}renderQueue();showPending(pendingSends.get(draftKey));if(!polling&&!sending)void poll();};
+  document.addEventListener('cantus-queue-change',queueListener);renderQueue();
   const phases={idle:'',preparing:'正在接回原會話…',running:'回覆中…',approval:'等待你確認權限',completed:'已完成 · 原始記錄已更新',failed:'未完成',stopped:'已停止'};
   function renderStatus(v){
     if(v.routing){lastRoute={...v.routing,model:v.model||v.routing.model};previewRoute();}
     if(v.revision!==undefined)box.dataset.labRevision=String(v.revision);
-    busy=v.busy;send.disabled=busy||!available;input.disabled=busy;providerPicker.disabled=busy;stop.hidden=!busy;
+    lastStatus=v;busy=v.busy;send.disabled=sending||window.cantusPlatform?.role==='viewer'||(!available&&!busy);input.disabled=false;providerPicker.disabled=busy;stop.hidden=!busy;send.textContent=busy||messageQueues.get(draftKey)?.items.length?'加入排隊':'送出';
     liveHead.lastChild.textContent=(v.provider||providerPicker.value)==='codex'?'Codex':'Claude';
     state.textContent=v.error||phases[v.phase]||v.phase;
     if(v.phase==='completed'&&!v.historyUpdated)state.textContent='這則訊息先前已送出，請重新讀取記錄。';
@@ -61,22 +105,30 @@ select=async function(s){
       const pending=pendingSends.get(draftKey);
       if(requestedPending!==pending?.requestId){nativePoll=setTimeout(poll,900);return;}
       if(pending&&pending.requestId!==v.requestId&&sending){nativePoll=setTimeout(poll,900);return;}
-      if(pending&&pending.requestId===v.requestId&&!v.busy&&v.phase==='completed'){pendingSends.delete(draftKey);if(drafts.get(draftKey)===pending.text)drafts.delete(draftKey);await load(true);if(selected===s.id&&generation===nativeSelection)await select(catalog.sessions.find(x=>x.id===s.id)||s);}
-      else{renderStatus(v);if(v.busy)nativePoll=setTimeout(poll,900);}
+      if(pending&&pending.requestId===v.requestId&&!v.busy&&v.phase==='completed'){pendingSends.delete(draftKey);await load(true);if(selected===s.id&&generation===nativeSelection)await select(catalog.sessions.find(x=>x.id===s.id)||s);}
+      else{renderStatus(v);if(v.busy||messageQueues.get(draftKey)?.items.length)nativePoll=setTimeout(poll,900);}
     }catch(e){state.textContent='連線中斷，未自動重送。'+e.message;nativePoll=setTimeout(poll,2500);}finally{polling=false;}
   }
   send.onclick=async()=>{
-    if(busy||!available||!input.value.trim())return;
-    const text=input.value,requestId=crypto.randomUUID();busy=true;sending=true;send.disabled=true;input.disabled=true;providerPicker.disabled=true;state.textContent='正在送出…';
+    const pendingActive=pendingSends.get(draftKey),awaitingStatus=pendingActive&&pendingActive.requestId!==lastStatus.requestId&&['正在送出…','已送出'].includes(pendingActive.state);
+    if(sending||window.cantusPlatform?.role==='viewer'||(!busy&&!awaitingStatus&&!available)||!input.value.trim())return;
+    const text=input.value,requestId=crypto.randomUUID();
+    if(busy||awaitingStatus||messageQueues.get(draftKey)?.items.length){
+      const q=messageQueues.get(draftKey)||{id:s.id,items:[],waiting:lastStatus.requestId,paused:false};
+      if(q.items.length>=20){state.textContent='最多排隊 20 則，文字仍保留。';return;}
+      if(!q.items.length){q.waiting=awaitingStatus?pendingActive.requestId:lastStatus.requestId;q.paused=false;q.reason='';q.transport=queueTransport();}
+      q.transport ||= queueTransport();q.items.push({text,requestId,provider:providerPicker.value,at:new Date().toISOString()});messageQueues.set(draftKey,q);input.value='';drafts.delete(draftKey);queueChanged();return;
+    }
+    busy=true;sending=true;send.disabled=true;input.disabled=false;providerPicker.disabled=true;state.textContent='正在送出…';
     const pending={text,requestId,at:new Date().toISOString(),state:'正在送出…'};pendingSends.set(draftKey,pending);input.value='';drafts.delete(draftKey);showPending(pending);
     try{const v=await postNative('send',{id:s.id,text,requestId,...(!providerPicker.hidden?{provider:providerPicker.value}:{})});pending.state='已送出';if(optimistic)optimistic.querySelector('.delivery-state').textContent=pending.state;renderStatus(v);poll();}
     catch(e){pending.state='送出未確認；文字已保留，未自動重送';if(optimistic)optimistic.querySelector('.delivery-state').textContent=pending.state;state.textContent=e.message+'（未自動重送）';if(!input.value){input.value=text;drafts.set(draftKey,text);}busy=false;send.disabled=!available;input.disabled=false;providerPicker.disabled=false;}
-    finally{sending=false;}
+    finally{sending=false;send.disabled=!available&&!busy;}
   };
   input.onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();send.click();}};
   stop.onclick=async()=>{stop.disabled=true;try{renderStatus(await postNative('stop',{id:s.id}));}catch(e){state.textContent=e.message;}finally{stop.disabled=false;}};
   let capabilityRequest=0;
-  async function checkCapability(){const seq=++capabilityRequest,cap=await api('/api/native/capability?id='+encodeURIComponent(s.id)+'&provider='+providerPicker.value);if(selected!==s.id||generation!==nativeSelection||seq!==capabilityRequest)return;if(cap.routing&&!providerPicker.querySelector('option[value="auto"]')){const auto=el('option','','自動派工');auto.value='auto';providerPicker.prepend(auto);providerPicker.value=providerChoices.get(draftKey)||'auto';}available=cap.available;providerPicker.hidden=!cap.switchable;note.textContent=cap.note;send.disabled=busy||!available;input.disabled=busy||!available;if(cap.available)$('detail').querySelector('.pill').textContent=s.handoff?'跨 AI 接續':s.managed?'面板獨立對話':'可原生續聊';previewRoute();return cap;}
+  async function checkCapability(){const seq=++capabilityRequest,cap=await api('/api/native/capability?id='+encodeURIComponent(s.id)+'&provider='+providerPicker.value);if(selected!==s.id||generation!==nativeSelection||seq!==capabilityRequest)return;if(cap.routing&&!providerPicker.querySelector('option[value="auto"]')){const auto=el('option','','自動派工');auto.value='auto';providerPicker.prepend(auto);providerPicker.value=providerChoices.get(draftKey)||'auto';}available=cap.available;providerPicker.hidden=!cap.switchable;note.textContent=cap.note;send.disabled=!busy&&!available;input.disabled=false;if(cap.available)$('detail').querySelector('.pill').textContent=s.handoff?'跨 AI 接續':s.managed?'面板獨立對話':'可原生續聊';previewRoute();return cap;}
   providerPicker.onchange=async()=>{providerChoices.set(draftKey,providerPicker.value);send.disabled=true;available=false;try{await checkCapability();}catch(e){note.textContent=e.message;}};
   try{const cap=await checkCapability();if(cap?.available){$('context').append(el('label','','目前 AI 原生 Session ID'),el('p','',cap.sourceSessionId));}await poll();}catch(e){note.textContent=e.message;}
 };

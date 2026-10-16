@@ -1,5 +1,15 @@
 /* Portable edition: no host inventory, tunnels, remote credentials or automatic discovery. */
 window.cantusPlatform={mode:'local',host:'local',label:'本機工作區',generation:0,providers:['codex','claude'],authenticated:true,role:'editor',key:id=>'local:'+id,fetch:(url,options)=>fetch(url,options)};
+window.cantusPlatform.capture=()=>{
+ const platform=window.cantusPlatform,targetHost=platform.host,revisions=platform.mode==='cloud'&&targetHost!=='m1';
+ async function request(url,body){
+  if(!platform.authenticated||platform.role!=='editor')throw Object.assign(Error('登入或權限已變更，排隊已暫停。'),{status:403});
+  const headers={};if(body){const r=await fetch('/api/bootstrap');if(!r.ok)throw Object.assign(Error('請重新登入。'),{status:r.status});headers['X-Cantus-Token']=(await r.json()).csrf;headers['Content-Type']='application/json';}
+  const r=await fetch(targetHost==='m1'?url.replace(/^\/api\//,'/api/m1/'):url,{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});
+  const value=await r.json();if(!r.ok)throw Object.assign(Error(value.error||'排隊請求失敗'),{status:r.status});return value;
+ }
+ return {revisions,get:url=>request(url),post:body=>request('/api/native/send',body)};
+};
 document.addEventListener('DOMContentLoaded',async()=>{
  const box=el('div','platform-box'),label=el('p','native-note','本機工作區 · 未設定遠端連線');box.append(label);document.querySelector('.intro').after(box);
  try{

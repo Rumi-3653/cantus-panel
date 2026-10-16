@@ -100,3 +100,14 @@ body{padding-top:42px}
 .cantus-context-menu[hidden]{display:none}.cantus-context-menu button{display:block;width:100%;padding:10px;text-align:left;border:0;background:transparent;color:#233749;border-radius:7px;cursor:pointer}.cantus-context-menu button:hover,.cantus-context-menu button:focus{background:#dceff3}
 .cantus-organize-dialog,.pair-dispatch-dialog{width:min(520px,calc(100vw - 32px));box-sizing:border-box;border:1px solid #bdd5df;border-radius:16px;padding:24px;background:#f3fafc;color:#233749}.cantus-organize-dialog::backdrop,.pair-dispatch-dialog::backdrop{background:#20384755}
 .cantus-organize-dialog input,.cantus-organize-dialog select,.pair-dispatch-dialog input,.pair-dispatch-dialog textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid #adcdd6;border-radius:8px;background:#fff;color:#233749;font:inherit}.pair-dispatch-dialog textarea{min-height:140px;resize:vertical}.pair-dispatch-dialog label{display:block;margin:14px 0}.organize-error{color:#9e3434;white-space:pre-wrap}.pair-result{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;max-height:360px;overflow:auto}.pair-host-badge{font-size:11px;color:#087e93}
+/* Keep organization dialogs readable independently of the chat composer. */
+.cantus-organize-dialog{margin:auto;max-height:calc(100dvh - 32px);overflow:auto;padding:28px}
+.cantus-organize-dialog form{display:flex;flex-direction:column;gap:18px}
+.cantus-organize-dialog h2{margin:0;font-size:20px;line-height:1.4;font-weight:600;overflow-wrap:anywhere}
+.cantus-organize-dialog input,.cantus-organize-dialog select{display:block;min-height:44px;font-size:16px;line-height:1.5}
+.cantus-organize-dialog .native-note{margin:0;font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.cantus-organize-dialog .organize-error{margin:0;font-size:13px;line-height:1.6}
+.cantus-organize-dialog .organize-error:empty{display:none}
+.cantus-organize-dialog .composer-actions{margin:4px 0 0;padding:16px 0 0;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:12px}
+.cantus-organize-dialog .composer-actions button{min-height:44px;padding:10px 18px;line-height:1.5;flex:none}
+@media(max-width:480px){.cantus-organize-dialog{padding:22px 20px}.cantus-organize-dialog h2{font-size:19px}}

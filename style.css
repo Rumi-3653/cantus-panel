@@ -189,8 +189,8 @@ body{padding-top:42px}
  body .app .composer:has(.provider-picker:focus-visible) .mobile-route-icon{outline:2px solid var(--teal);outline-offset:2px}
  body .app .composer:has(.provider-picker:disabled) .mobile-route-icon{opacity:.45}
  body .app .composer:has(.provider-picker[hidden]) .mobile-route-icon{display:none}
- body .app .composer .stop-message{grid-column:4;grid-row:2;width:44px;height:44px;min-height:44px;font-size:0;padding:0;border-radius:50%}
- body .app .composer .stop-message::after{content:'';display:inline-block;width:12px;height:12px;border-radius:2px;background:currentColor}
+ body .app .composer .stop-message{grid-column:4;grid-row:2;display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;font-size:0;padding:0;border:0;border-radius:50%;background:transparent}
+ body .app .composer .stop-message::after{content:'';display:block;box-sizing:border-box;width:36px;height:36px;border:1px solid #d9a4a4;border-radius:50%;background:#fff center/12px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect width='12' height='12' rx='2' fill='%23a65f5f'/%3E%3C/svg%3E")}
  body .app .composer .native-queue,body .app .composer .native-approvals{grid-column:1/-1;max-height:140px;overflow:auto;overscroll-behavior:contain}
  body .app .composer .native-queue:empty,body .app .composer .native-approvals:empty{display:none}
  body .app .composer .approval{margin-top:6px;padding:8px}

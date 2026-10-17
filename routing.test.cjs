@@ -14,7 +14,7 @@ test('configuration validates all boundaries without arbitrary expressions or mo
  const c=defaults();c.rules.push(c.rules[0]);assert.throws(()=>validate(c));assert.throws(()=>validate({...defaults(),revision:-1}));assert.throws(()=>validate({...defaults(),rules:Array(13).fill(defaults().rules[0])}));
 });
 test('settings persist with backup and stale writers cannot overwrite another tab',t=>{
- const root=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'cantus-routing-unit-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const store=new RoutingStore(path.join(root,'routing.json')),c=store.read();c.rules[0].provider='codex';const saved=store.save(c);assert.equal(saved.revision,1);assert.equal(new RoutingStore(store.file).read().rules[0].provider,'codex');assert.throws(()=>store.save(c),/另一個視窗/);store.save(saved);assert.ok(fs.existsSync(store.file+'.revision-1.bak'));assert.equal(fs.statSync(store.file).mode&0o777,0o600);
+ const root=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'cantus-routing-unit-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const store=new RoutingStore(path.join(root,'routing.json')),c=store.read();c.rules[0].provider='codex';const saved=store.save(c);assert.equal(saved.revision,1);assert.equal(new RoutingStore(store.file).read().rules[0].provider,'codex');assert.throws(()=>store.save(c),/另一個視窗/);store.save(saved);assert.ok(fs.existsSync(store.file+'.revision-1.bak'));if(process.platform!=='win32')assert.equal(fs.statSync(store.file).mode&0o777,0o600);
 });
 test('catalog checks model and effort before dispatch and reports unavailable without guessing',async()=>{
  let calls=0;const catalog=new ModelCatalog(async()=>{calls++;return [{id:'fixture',efforts:['low','high']}];});

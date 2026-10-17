@@ -261,5 +261,5 @@ body{padding-top:42px}
 .brand-codex{background-image:var(--brand-codex)!important}
 .brand-claude{background-image:var(--brand-claude)!important}
 .mini-avatar.brand-icon{background-color:transparent;border-radius:0}
-.nav .provider-mark{font-size:0;width:22px;height:22px;background:var(--brand-codex) center/contain no-repeat}
+.nav .provider-mark{font-size:0;width:22px;height:22px;border:0;border-radius:0;box-shadow:none;background:var(--brand-codex) center/contain no-repeat}
 .nav .provider-mark.claude{background-image:var(--brand-claude)}

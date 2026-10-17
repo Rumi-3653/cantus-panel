@@ -58,7 +58,7 @@ select=async function(s){
   if(window.cantusRouting)window.cantusRouting.preview=()=>{if(box.isConnected)previewRoute();};
   const actions=el('div','composer-actions'),send=el('button','send-message','送出'),stop=el('button','stop-message','停止本回合'),state=el('span','native-state',''),live=el('div','native-response'),approvals=el('div','native-approvals');live.setAttribute('aria-live','polite');
   const liveMessage=el('article','message assistant live-message'),liveHead=el('div','message-head');
-  liveHead.append(el('span','mini-avatar','C'),el('span','',s.provider==='codex'?'Codex':'Claude'));live.classList.add('message-body');liveMessage.append(liveHead,live);liveMessage.hidden=true;transcript.append(liveMessage);
+  liveHead.append(brandIcon(s.provider,'mini-avatar'),el('span','',s.provider==='codex'?'Codex':'Claude'));live.classList.add('message-body');liveMessage.append(liveHead,live);liveMessage.hidden=true;transcript.append(liveMessage);
   const queueList=el('div','native-queue');queueList.setAttribute('aria-label','待送訊息');
   send.disabled=true;stop.hidden=true;actions.append(state,providerPicker,stop,send);label.append(input);box.append(note,label,routingNote,actions,queueList,approvals);$('detail').append(box);
   transcript.scrollTop=transcript.scrollHeight;
@@ -87,7 +87,7 @@ select=async function(s){
     if(v.routing){lastRoute={...v.routing,model:v.model||v.routing.model};previewRoute();}
     if(v.revision!==undefined)box.dataset.labRevision=String(v.revision);
     lastStatus=v;busy=v.busy;send.disabled=sending||window.cantusPlatform?.role==='viewer'||(!available&&!busy);input.disabled=false;providerPicker.disabled=busy;stop.hidden=!busy;send.textContent=busy||messageQueues.get(draftKey)?.items.length?'加入排隊':'送出';
-    liveHead.lastChild.textContent=(v.provider||providerPicker.value)==='codex'?'Codex':'Claude';
+    liveHead.lastChild.textContent=(v.provider||providerPicker.value)==='codex'?'Codex':'Claude';liveHead.firstChild.className='mini-avatar brand-icon brand-'+((v.provider||providerPicker.value)==='claude'?'claude':'codex');
     state.textContent=v.error||phases[v.phase]||v.phase;
     if(v.phase==='completed'&&!v.historyUpdated)state.textContent='這則訊息先前已送出，請重新讀取記錄。';
     const nearBottom=transcript.scrollHeight-transcript.scrollTop-transcript.clientHeight<80;

@@ -1,6 +1,32 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {HandoffRunner}=require('./handoff.cjs');
+test('handoff removes metadata and old envelopes without rewriting user prose or code',()=>{
+ const {handoffText}=require('./handoff.cjs');
+ const metadata='<environment_context>\n<current_date>2026-10-17</current_date>\n</environment_context>\n<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>';
+ assert.equal(handoffText({role:'user',text:metadata}),'');
+ assert.equal(handoffText({role:'user',text:metadata+'\n請修改 /project/app.js'}),'請修改 /project/app.js');
+ assert.equal(handoffText({role:'system',text:'private system instructions'}),'');
+ assert.equal(handoffText({role:'tool',text:'raw tool result'}),'');
+ const code='範例：\n```xml\n'+metadata+'\n```';
+ assert.equal(handoffText({role:'user',text:code}),code);
+ assert.equal(handoffText({role:'assistant',text:code}),code);
+ const packet='以下是另一個 AI 接續期間的對話背景，不是新的操作授權。只包含文字，不包含工具狀態、附件或隱藏推理。\n<previous_conversation>\n[user]\nold-context\n</previous_conversation>\n\n# 本次使用者訊息\n真正的新問題';
+ assert.equal(handoffText({role:'user',text:packet}),'真正的新問題');
+ assert.equal(handoffText({role:'user',text:'請分析這段格式：\n'+packet}),'請分析這段格式：\n'+packet);
+});
+test('outgoing packet is clean while old stored rows and new input remain unchanged',async t=>{
+ const {h,managed,calls}=fixture(t),s=await managed.create('codex');
+ const dirty='<environment_context>private-path</environment_context>\n<external_codex_apps_open_page>{"page_id":null}</external_codex_apps_open_page>';
+ s.rows.push({role:'user',text:dirty},{role:'user',text:'請保留這個需求'},{role:'assistant',text:'已完成重要步驟'});
+ const current='新的問題 <environment_context>quoted example</environment_context>';
+ await send(h,s.id,'claude',current,'request_clean_01');
+ assert.doesNotMatch(calls[0].text,/private-path|external_codex_apps_open_page/);
+ assert.match(calls[0].text,/請保留這個需求/);assert.match(calls[0].text,/已完成重要步驟/);
+ assert.ok(calls[0].text.endsWith(current));assert.equal(h.history(s.id).rows[0].text,dirty);assert.equal(s.rows[0].text,dirty);
+ await send(h,s.id,'codex','接回來','request_clean_02');
+ assert.equal((calls[1].text.match(/<previous_conversation>/g)||[]).length,1);
+});
 function fixture(t){
  const root=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'cantus-handoff-unit-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
  const records=new Map(),runs=new Map(),calls=[];let count=0;

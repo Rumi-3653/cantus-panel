@@ -15,6 +15,23 @@ function fixture(){
  vm.createContext(ctx);return {ctx,nodes,events,platform,motion,frames,body};
 }
 const flush=()=>new Promise(r=>setImmediate(r));
+test('active writer conflict is shown in plain Chinese without changing other errors',()=>{
+ const source=fs.readFileSync(require('node:path').join(__dirname,'app.js'),'utf8');
+ const fn=vm.runInNewContext('('+source.match(/function friendlyWriterConflict\(text\)\{[\s\S]*?\n\}/)[0]+')');
+ const raw='thread 00000000-1111-2222-3333-444444444444 already has an active writer';
+ const plain='這個對話正在其他地方執行，請等它完成後再試。';
+ assert.equal(fn(raw),plain);assert.equal(fn('［未完成］'+raw),plain);
+ assert.equal(fn('先前的回覆\n［未完成］'+raw),'先前的回覆\n'+plain);
+ assert.equal(fn('其他錯誤保持原樣'),'其他錯誤保持原樣');
+ assert.ok(source.includes("row.role==='user'?row.text:friendlyFailureText(row.text)"));
+ const context=vm.createContext({});
+ vm.runInContext(source.slice(source.indexOf('function friendlyWriterConflict'),source.indexOf('function renderMessageContent')),context);
+ for(const raw of ['Error: unexpected RPC failure\n at runner.js:12','fetch failed','429 rate limit exceeded','Unauthorized','Permission denied','revision conflict','Timed out','session not found','aborted']){
+  const result=context.friendlyNativeError(raw);assert.match(result,/[\u3400-\u9fff]/);assert.ok(!result.includes(raw));
+ }
+ assert.equal(context.friendlyFailureText('正常英文 Hello\n［未完成］Error: RPC failed'),'正常英文 Hello\n未完成：這次操作沒有完成，請稍後再試；若持續發生，請聯絡管理員。');
+ assert.equal(context.friendlyFailureText('Normal English reply'),'Normal English reply');
+});
 const graph=title=>({revision:1,note:'虛構資料',edges:[],nodes:[{id:'fixture-session',title,source:'fixture',provider:'codex',handoffs:[]}]});
 test('Lineage uses current workspace and discards old reads and pending writes',async()=>{
  const f=fixture();let releaseRead,releaseBootstrap;const calls=[];

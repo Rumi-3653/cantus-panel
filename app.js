@@ -23,7 +23,7 @@ window.cantusOpenWork=async target=>{
   if(matches.length!==1){toast('找不到唯一對應的原對話；保留唯讀詳情，不建立新 session。');return false;}
   const s=matches[0];if(!catalog.sessions.some(x=>x.id===s.id))catalog.sessions.push(s);
   $('work').click();if(selected!==s.id)await select(s);else renderList(s.id);document.dispatchEvent(new Event('cantus-work-opened'));return true;
- }catch(e){toast(e.message);return false;}
+ }catch(e){toast(friendlyNativeError(e));return false;}
 };
 const conversationOpen=new Map();
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',4500);}
@@ -78,6 +78,27 @@ function messageParts(text){
  }
  if(cursor<text.length)parts.push({text:text.slice(cursor)});return parts;
 }
+function friendlyWriterConflict(text){
+ return String(text??'').replace(/(?:［未完成］\s*)?thread\s+[a-z0-9-]+\s+already has an active writer\.?/gi,'這個對話正在其他地方執行，請等它完成後再試。');
+}
+function friendlyNativeError(error){
+ const raw=String(error?.message??error??''),text=friendlyWriterConflict(raw);
+ if(text!==raw)return '這個對話正在其他地方執行，請等它完成後再試。';
+ if(/rate.?limit|too many requests|quota|usage limit|429/i.test(raw))return '目前使用額度或次數已達上限，請稍後再試或查看帳號額度。';
+ if(/unauthorized|unauthenticated|token.*expired|401/i.test(raw))return '登入已失效，請重新登入後再試。';
+ if(/permission|forbidden|access denied|403/i.test(raw))return '目前沒有操作權限，請確認帳號或請管理員協助。';
+ if(/busy|locked|already.*running|active writer/i.test(raw))return '這個對話正在執行，請等它完成後再試。';
+ if(/conflict|revision|stale|409/i.test(raw))return '對話狀態已更新，請重新整理後再試。';
+ if(/timeout|timed out/i.test(raw))return '等候回應逾時，請稍後查看結果。';
+ if(/network|fetch|connection|offline|ECONN|ENOTFOUND|502|503|504/i.test(raw))return '目前連線不穩，請稍後再試。';
+ if(/not found|404|no such/i.test(raw))return '找不到這個對話或資料，請重新整理後再試。';
+ if(/cancelled|canceled|aborted|stopped/i.test(raw))return '這次操作已停止。';
+ if(/[\u3400-\u9fff]/.test(raw)&&raw.length<100&&!/[\r\n{}]|\b(?:Error|Exception|thread|stack|stderr)\b/i.test(raw)&&!/[a-z]{12}/i.test(raw))return raw;
+ return '這次操作沒有完成，請稍後再試；若持續發生，請聯絡管理員。';
+}
+function friendlyFailureText(text){
+ return friendlyWriterConflict(String(text??'')).replace(/［未完成］([\s\S]*)$/,(_,error)=>'未完成：'+friendlyNativeError(error));
+}
 function renderMessageContent(container,text){
  if(container.messageText===text)return;
  const expanded=new Set([...container.querySelectorAll('details[data-part]')].filter(d=>d.open).map(d=>d.dataset.part));
@@ -94,7 +115,7 @@ function messageArticle(row,s){
   article.messageText=row.text;
   if(row.at)article.dataset.sentAt=row.at;
   head.append(row.role==='user'?el('span','mini-avatar','你'):brandIcon(row.provider||s.provider,'mini-avatar'),el('span','',row.role==='user'?'你':(row.provider||s.provider)==='codex'?'Codex':'Claude'),el('span','',date(row.at)));article.append(head);
-  const content=el('div','message-body');renderMessageContent(content,row.text);article.append(content);return article;
+  const content=el('div','message-body');renderMessageContent(content,row.role==='user'?row.text:friendlyFailureText(row.text));article.append(content);return article;
 }
 async function select(s){
   selected=s.id;const seq=++request;renderList(s.id);
@@ -112,7 +133,7 @@ async function select(s){
     async function turnPage(url,button){
       button.disabled=true;
       try{const page=await api(url);if(seq!==request||!body.isConnected)return;showPage(page);const scroll=body.closest('.transcript-scroll');if(scroll)scroll.scrollTop=0;}
-      catch(e){if(seq===request)toast(e.message);}finally{button.disabled=false;}
+      catch(e){if(seq===request)toast(friendlyNativeError(e));}finally{button.disabled=false;}
     }
     if(h.hasMore){const older=el('button','history-older','查看更早 120 則');older.onclick=()=>turnPage(base+`&before=${h.nextBefore}&signature=${encodeURIComponent(h.pageSignature)}`,older);controls.append(older);}
     if(h.pageStart+h.rows.length<h.totalRows){const newest=el('button','history-newest','回到最新');newest.onclick=()=>turnPage(base,newest);controls.append(newest);}
@@ -120,9 +141,9 @@ async function select(s){
     for(const row of visibleRows)body.append(messageArticle(row,s));
     for(const w of h.warnings||[])body.append(el('p','empty',w));
   }
-  try{const h=await api(base);if(seq===request)showPage(h);}catch(e){if(seq===request)body.replaceChildren(el('div','empty',e.message));}
+  try{const h=await api(base);if(seq===request)showPage(h);}catch(e){if(seq===request)body.replaceChildren(el('div','empty',friendlyNativeError(e)));}
 }
-async function load(refresh=false){$('refresh').disabled=true;$('connection').textContent='正在讀取來源';try{catalog=await api('/api/sessions'+(refresh?'?refresh=1':''));$('allCount').textContent=catalog.sessions.length;$('projectCount').textContent=CantusConversations.build(catalog.sessions).filter(g=>g.kind==='project').length;$('todayCount').textContent=catalog.sessions.filter(s=>new Date(s.updatedAt).toDateString()===new Date().toDateString()).length;$('providers').replaceChildren();$('warnings').replaceChildren();for(const p of ['codex','claude'])$(p+'Count').textContent='—';for(const p of catalog.providers){$(p.provider+'Count').textContent=p.count;const c=el('div','glass-card'),d=el('div');d.append(el('strong','',p.provider==='codex'?'Codex':'Claude'),el('p','',p.supported?'來源索引已讀取':'無法讀取'));c.append(brandIcon(p.provider,'source-icon'),d,el('span','source-number',p.count));$('providers').append(c);for(const w of p.warnings||[])$('warnings').append(el('p','',w));}renderList();$('connection').textContent=catalog.demo?'虛構資料示範 · 未連接帳號':`${catalog.providers.filter(p=>p.supported).length} 個來源已連接`;if(catalog.demo){document.querySelector('.sidebar-bottom').textContent='虛構資料示範 · 不會呼叫 AI';document.querySelector('.edition').textContent='DEMO';document.querySelector('.inspector .glass-card p').textContent='未連接任何帳號';};if(refresh&&selected){const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s,{background:true});}}catch(e){$('connection').textContent='連接失敗';$('list').replaceChildren(el('div','empty',e.message));}finally{$('refresh').disabled=false;}}
+async function load(refresh=false){$('refresh').disabled=true;$('connection').textContent='正在讀取來源';try{catalog=await api('/api/sessions'+(refresh?'?refresh=1':''));$('allCount').textContent=catalog.sessions.length;$('projectCount').textContent=CantusConversations.build(catalog.sessions).filter(g=>g.kind==='project').length;$('todayCount').textContent=catalog.sessions.filter(s=>new Date(s.updatedAt).toDateString()===new Date().toDateString()).length;$('providers').replaceChildren();$('warnings').replaceChildren();for(const p of ['codex','claude'])$(p+'Count').textContent='—';for(const p of catalog.providers){$(p.provider+'Count').textContent=p.count;const c=el('div','glass-card'),d=el('div');d.append(el('strong','',p.provider==='codex'?'Codex':'Claude'),el('p','',p.supported?'來源索引已讀取':'無法讀取'));c.append(brandIcon(p.provider,'source-icon'),d,el('span','source-number',p.count));$('providers').append(c);for(const w of p.warnings||[])$('warnings').append(el('p','',w));}renderList();$('connection').textContent=catalog.demo?'虛構資料示範 · 未連接帳號':`${catalog.providers.filter(p=>p.supported).length} 個來源已連接`;if(catalog.demo){document.querySelector('.sidebar-bottom').textContent='虛構資料示範 · 不會呼叫 AI';document.querySelector('.edition').textContent='DEMO';document.querySelector('.inspector .glass-card p').textContent='未連接任何帳號';};if(refresh&&selected){const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s,{background:true});}}catch(e){$('connection').textContent='連接失敗';$('list').replaceChildren(el('div','empty',friendlyNativeError(e)));}finally{$('refresh').disabled=false;}}
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===b));renderList();});$('search').oninput=renderList;$('refresh').onclick=()=>load(true);document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();$('search').focus();}});$('work').onclick=()=>{filter='all';renderList();};$('lineage').onclick=()=>toast('目前以右側來源與專案位置呈現脈絡；跨會話關聯尚未接入。');$('live').onclick=()=>toast('選取會話後可在下方續聊、確認權限及停止面板啟動的回合。');load();
 // Decorative companions stay outside the clipped frame; petting only changes their cheeks.
 (()=>{

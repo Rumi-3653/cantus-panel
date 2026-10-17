@@ -11,6 +11,15 @@ window.cantusPlatform.capture=()=>{
  return {revisions,get:url=>request(url),post:body=>request('/api/native/send',body)};
 };
 document.addEventListener('DOMContentLoaded',async()=>{
+ let checking=false;
+ setInterval(async()=>{
+  const platform=window.cantusPlatform;if(checking||document.hidden||!platform.authenticated)return;
+  checking=true;const generation=platform.generation;
+  try{const c=await api('/api/sessions');if(generation!==platform.generation)return;
+   const changed=JSON.stringify(catalog)!==JSON.stringify(c);catalog=c;
+   if(changed){renderList();$('allCount').textContent=c.sessions.length;$('projectCount').textContent=CantusConversations.build(c.sessions).filter(g=>g.kind==='project').length;}
+  }catch{/* Keep the last list and the current draft during a transient outage. */}finally{checking=false;}
+ },2500);
  const box=el('div','platform-box'),label=el('p','native-note','本機工作區 · 未設定遠端連線');box.append(label);document.querySelector('.intro').after(box);
  try{
   const response=await fetch('/api/bootstrap');if(!response.ok)return;const boot=await response.json(),platform=window.cantusPlatform;

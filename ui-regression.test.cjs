@@ -11,7 +11,7 @@ function fixture(){
  const nodes=Object.fromEntries(['app','work','live','lineage','intro'].map(x=>[x,new Element('div',x)])),body=new Element();
  const document={body,hidden:false,querySelector:s=>nodes[s.slice(1)],querySelectorAll:()=>[],createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag),addEventListener:(name,fn)=>events[name]=fn,dispatchEvent:e=>events[e.type]?.(e)};
  const platform={mode:'cloud',host:'fixture-a',label:'示範 A',authenticated:true,role:'editor'},motion={matches:false,addEventListener(){}};
- const ctx={document,window:{cantusPlatform:platform,addEventListener(){}},el:(...args)=>new Element(...args),$:id=>nodes[id],toast(){},fetch:async()=>({ok:true,json:async()=>({csrf:'fixture'})}),ResizeObserver:class{observe(){} disconnect(){}},requestAnimationFrame:fn=>(frames.push(fn),frames.length),cancelAnimationFrame(){},matchMedia:()=>motion,performance:{now:()=>1000},Event:class{constructor(type){this.type=type;}},location:{assign:url=>ctx.destination=url}};
+ const ctx={document,window:{cantusPlatform:platform,addEventListener(){}},el:(...args)=>new Element(...args),$:id=>nodes[id],toast(){},fetch:async()=>({ok:true,json:async()=>({csrf:'fixture'})}),ResizeObserver:class{observe(){} disconnect(){}},requestAnimationFrame:fn=>(frames.push(fn),frames.length),cancelAnimationFrame(){},setInterval(){},matchMedia:()=>motion,performance:{now:()=>1000},Event:class{constructor(type){this.type=type;}},location:{assign:url=>ctx.destination=url}};
  vm.createContext(ctx);return {ctx,nodes,events,platform,motion,frames,body};
 }
 const flush=()=>new Promise(r=>setImmediate(r));

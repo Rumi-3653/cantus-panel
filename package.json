@@ -7,7 +7,7 @@
   "engines": { "node": ">=24.0.0" },
   "scripts": {
     "start": "node server.cjs",
-    "test": "node --test conversation-tree.test.cjs lineage.test.cjs routing.test.cjs handoff.test.cjs panel-runner.test.cjs portable.test.cjs ui-regression.test.cjs pair.test.cjs pair-http.test.cjs pair-transport.test.cjs",
+    "test": "node --test managed-init.test.cjs catalog-refresh.test.cjs conversation-tree.test.cjs lineage.test.cjs routing.test.cjs handoff.test.cjs panel-runner.test.cjs portable.test.cjs ui-regression.test.cjs pair.test.cjs pair-http.test.cjs pair-transport.test.cjs",
     "check:privacy": "node scripts/check-privacy.cjs",
     "start:gateway": "node cloud/gateway.cjs"
   }

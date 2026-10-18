@@ -38,7 +38,7 @@ for(const provider of ['codex','claude'])test(provider+': busy composer queues F
   const full=path.join(__dirname,portable||file==='native-ui.js'?'..':'assets',file);if(!fs.existsSync(full))return route.abort();
   return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:fs.readFileSync(full)});
  });
- const open=async()=>{await page.locator('.session').first().waitFor({state:'attached'});for(const summary of await page.locator('.conversation-group:not([open]) > summary').all())await summary.click();await page.locator('.session').filter({hasText:'Queue fixture 0'}).click();await page.getByRole('button',{name:'加入排隊',exact:true}).waitFor();};
+ const open=async()=>{await page.locator('.conversation-group').first().waitFor();for(const summary of await page.locator('.conversation-group:not([open]) > summary').all())await summary.click();await page.locator('.session').filter({hasText:'Queue fixture 0'}).click();await page.getByRole('button',{name:'加入排隊',exact:true}).waitFor();};
  const queue=async text=>{await page.getByLabel('續聊訊息',{exact:true}).fill(text);await page.getByRole('button',{name:'加入排隊',exact:true}).click();};
  const complete=host=>statuses[host]={...statuses[host],busy:false,phase:'completed',historyUpdated:true,revision:statuses[host].revision+1};
  try{

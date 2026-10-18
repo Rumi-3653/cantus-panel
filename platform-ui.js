@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const platform=window.cantusPlatform;if(checking||document.hidden||!platform.authenticated)return;
   checking=true;const generation=platform.generation;
   try{const c=await api('/api/sessions');if(generation!==platform.generation)return;
-   const changed=JSON.stringify(catalog)!==JSON.stringify(c);catalog=c;
+   const changed=c.catalogVersion&&catalog.catalogVersion?c.catalogVersion!==catalog.catalogVersion:JSON.stringify(catalog)!==JSON.stringify(c);catalog=c;
    if(changed){renderList();$('allCount').textContent=c.sessions.length;$('projectCount').textContent=CantusConversations.build(c.sessions).filter(g=>g.kind==='project').length;}
   }catch{/* Keep the last list and the current draft during a transient outage. */}finally{checking=false;}
  },15000);

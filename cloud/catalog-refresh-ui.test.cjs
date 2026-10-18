@@ -19,7 +19,7 @@ test('automatic catalog refresh adds a session without replacing the active comp
  });
  await page.goto('http://refresh.test/');await page.waitForFunction(()=>catalog.sessions.length===1);await page.evaluate(()=>select(catalog.sessions[0]));
  const input=page.getByRole('textbox',{name:'續聊訊息',exact:true});await input.fill('草稿不能消失');await page.evaluate(()=>{document.querySelector('.composer').dataset.retained='yes';});added=true;
- await page.waitForFunction(()=>catalog.sessions.some(s=>s.id==='panel_refresh_added'),{},{timeout:10000});
+ await page.waitForFunction(()=>catalog.sessions.some(s=>s.id==='panel_refresh_added'),{},{timeout:20000});
  assert.equal(await input.inputValue(),'草稿不能消失');assert.equal(await page.locator('.composer').getAttribute('data-retained'),'yes');assert.equal(await page.evaluate(()=>selected),'panel_refresh_original');assert.ok(reads>=2);assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });

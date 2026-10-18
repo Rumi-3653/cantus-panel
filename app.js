@@ -27,18 +27,32 @@ window.cantusOpenWork=async target=>{
 };
 const conversationOpen=new Map();
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',4500);}
+let catalogReadCache=null;
 async function api(url){
- const generation=window.cantusPlatform?.generation;
+ const generation=window.cantusPlatform?.generation,isCatalog=url.startsWith('/api/sessions');
+ const cacheKey=String(generation)+':'+(window.cantusPlatform?.key('catalog')||'local');
+ const saved=isCatalog&&catalogReadCache?.key===cacheKey?catalogReadCache:null;
  const current=()=>{if(generation!==window.cantusPlatform?.generation)throw Object.assign(Error('平台已切換，已略過舊回應'),{code:'platform-changed'});};
  if(url.startsWith('/api/sessions'))url+=(url.includes('?')?'&':'?')+'background=1';
  for(let attempt=0;attempt<2;attempt++){
   current();
   try{
-   const r=await (window.cantusPlatform?.fetch||fetch)(url);current();
+   const readUrl=url;
+   const requestUrl=isCatalog&&saved?.value.catalogVersion?readUrl+'&since='+saved.value.catalogVersion:readUrl;
+   const r=await (window.cantusPlatform?.fetch||fetch)(requestUrl);current();
    if([502,503,504].includes(r.status))throw Object.assign(Error('目前連線不穩，請稍後再試。'),{status:r.status});
    if(r.status===401)throw Object.assign(Error('登入已失效，請重新登入後再試。'),{status:401});
-   const data=await r.json();current();
+   let data=await r.json();current();
    if(!r.ok)throw Object.assign(Error(data.error||'讀取失敗'),{status:r.status,code:data.code});
+   if(isCatalog){
+    if(data.notModified){if(!saved||data.catalogVersion!==saved.value.catalogVersion)throw Error('清單版本不一致');return saved.value;}
+    if(data.delta){
+     if(!saved)throw Error('清單缺少基準版本');
+     const rows=new Map(saved.value.sessions.map(s=>[s.id,s]));for(const id of data.removed||[])rows.delete(id);for(const s of data.sessions)rows.set(s.id,s);
+     const {delta,removed,order,...meta}=data;data={...saved.value,...meta,sessions:order?order.map(id=>rows.get(id)).filter(Boolean):[...rows.values()]};
+    }
+    catalogReadCache={key:cacheKey,value:data};
+   }
    return data;
   }catch(e){
    current();
@@ -51,33 +65,52 @@ async function api(url){
 }
 function visible(){return catalog.sessions.filter(s=>filter==='all'||filter==='projects'||filter===s.provider||filter==='today'&&new Date(s.updatedAt).toDateString()===new Date().toDateString());}
 function visibleProjects(){return (catalog.projects||[]).filter(p=>filter==='all'||filter==='projects'||filter===p.provider);}
+const listNodes=new Map();let listScope='';
+function syncListChildren(parent,nodes){
+ const keep=new Set(nodes);for(const child of [...parent.children])if(!keep.has(child))child.remove();
+ nodes.forEach((node,i)=>{if(parent.children[i]!==node)parent.insertBefore(node,parent.children[i]||null);});
+}
 function renderList(revealId){
+ const list=$('list'),scroll=list.scrollTop,query=$('search').value,scope=window.cantusPlatform?.key('conversation-tree')||'local';
+ if(scope!==listScope){listNodes.clear();listScope=scope;}
+ const used=new Set(),groups=CantusConversations.build(visible(),{query,projects:visibleProjects(),folders:catalog.cantusFolders||[]});
  $('projectCount').textContent=CantusConversations.build(catalog.sessions,{projects:catalog.projects||[],folders:catalog.cantusFolders||[]}).filter(g=>g.kind==='project').length;
- const list=$('list'),scroll=list.scrollTop,query=$('search').value,groups=CantusConversations.build(visible(),{query,projects:visibleProjects(),folders:catalog.cantusFolders||[]}),scope=window.cantusPlatform?.key('conversation-tree')||'local';
- list.replaceChildren();$('listCount').textContent=`${groups.reduce((sum,g)=>sum+g.count,0).toLocaleString()} 段會話`;$('listTitle').textContent=filter==='today'?'今天':filter==='codex'?'Codex':filter==='claude'?'Claude':'專案與會話';
- const contains=n=>n.session.id===revealId||n.children.some(contains);
+ $('listCount').textContent=`${groups.reduce((sum,g)=>sum+g.count,0).toLocaleString()} 段會話`;$('listTitle').textContent=filter==='today'?'今天':filter==='codex'?'Codex':filter==='claude'?'Claude':'專案與會話';
+ const contains=n=>n.session.id===revealId||n.children.some(contains),groupContains=g=>g.roots.some(contains)||(g.subgroups||[]).some(groupContains);
  function branch(n,depth=0){
-  const s=n.session,box=el('div','conversation-item'),row=el('div','conversation-row'),b=el('button','session'+(selected===s.id?' selected':''));box.dataset.sessionId=s.id;b.setAttribute('aria-pressed',String(selected===s.id));b.title=[name(s),s.source,s.cwd].filter(Boolean).join('\n');
-  b.append(el('h3','',name(s)));const meta=el('div','conversation-meta');meta.append(el('span','',s.provider==='codex'?'Codex':'Claude'),el('time','',date(s.updatedAt)));if(!s.hasTranscript)meta.append(el('span','','僅有索引'));if(depth)meta.append(el('span','',n.relation==='fork'?'分支':n.relation==='spawn'?'派生對話':'子會話'));b.append(meta);b.onclick=()=>select(s);
-  if(n.children.length){const key=scope+':branch:'+s.id,toggle=el('button','branch-toggle'),children=el('div','conversation-children');toggle.type='button';toggle.setAttribute('aria-label','展開分支：'+name(s));const opened=query.trim()||contains(n)||conversationOpen.get(key)===true;if(revealId&&contains(n))conversationOpen.set(key,true);children.hidden=!opened;toggle.textContent=opened?'▾':'▸';toggle.setAttribute('aria-expanded',String(!!opened));toggle.title=n.children.length+' 個直接分支';toggle.onclick=()=>{const open=children.hidden;children.hidden=!open;conversationOpen.set(key,open);toggle.textContent=open?'▾':'▸';toggle.setAttribute('aria-expanded',String(open));};row.append(toggle,b);for(const c of n.children)children.append(branch(c,depth+1));box.append(row,children);}
-  else{row.append(el('span','branch-spacer'),b);box.append(row);}return box;
+  const s=n.session,key=scope+':branch:'+s.id;used.add(key);let item=listNodes.get(key);
+  if(!item){item={box:el('div','conversation-item'),row:el('div','conversation-row'),children:el('div','conversation-children')};item.box.dataset.sessionId=s.id;item.box.append(item.row,item.children);listNodes.set(key,item);}
+  const signature=JSON.stringify([s,depth,n.relation,n.children.length]);
+  if(item.signature!==signature){
+   item.signature=signature;const b=el('button','session');b.title=[name(s),s.source,s.cwd].filter(Boolean).join('\n');b.append(el('h3','',name(s)));const meta=el('div','conversation-meta');meta.append(el('span','',s.provider==='codex'?'Codex':'Claude'),el('time','',date(s.updatedAt)));if(!s.hasTranscript)meta.append(el('span','','僅有索引'));if(depth)meta.append(el('span','',n.relation==='fork'?'分支':n.relation==='spawn'?'派生對話':'子會話'));b.append(meta);b.onclick=()=>select(s);item.button=b;
+   item.toggle=n.children.length?el('button','branch-toggle'):el('span','branch-spacer');if(n.children.length){item.toggle.type='button';item.toggle.setAttribute('aria-label','展開分支：'+name(s));item.toggle.title=n.children.length+' 個直接分支';item.toggle.onclick=()=>{conversationOpen.set(key,item.children.hidden);renderList();};}item.row.replaceChildren(item.toggle,b);delete item.row.dataset.mobileMenu;
+  }
+  item.button.classList.toggle('selected',selected===s.id);item.button.setAttribute('aria-pressed',String(selected===s.id));
+  const opened=!!query.trim()||contains(n)||conversationOpen.get(key)===true;if(revealId&&contains(n))conversationOpen.set(key,true);item.children.hidden=!opened;
+  if(n.children.length){const glyph=opened?'▾':'▸';if(item.toggle.textContent!==glyph)item.toggle.textContent=glyph;item.toggle.setAttribute('aria-expanded',String(opened));}
+  syncListChildren(item.children,opened?n.children.map(c=>branch(c,depth+1)):[]);return item.box;
  }
- const groupContains=g=>g.roots.some(contains)||(g.subgroups||[]).some(groupContains);
  function groupView(g,topLevel=true){
-  const project=g.kind==='project',codex=project&&g.provider==='codex',key=scope+':group:'+g.key,details=el('details','conversation-group'+(topLevel?' folder-group':'')+(codex?' codex-project':'')),summary=el('summary'),title=el('span','conversation-group-title',g.name),count=el('span','conversation-count',String(g.count)),body=el('div','conversation-group-body');
-  details.dataset.groupKey=g.key;if(g.cantusFolderId)details.dataset.cantusFolderId=g.cantusFolderId;summary.title=g.path||g.source||g.name;
-  if(topLevel){const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('class','conversation-folder');icon.setAttribute('aria-hidden','true');for(const [state,d]of [['open','M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 7h16a2 2 0 0 1 2 3l-3 9H5a2 2 0 0 1-2-2Z'],['closed','M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z']]){const line=document.createElementNS(icon.namespaceURI,'path');line.setAttribute('class','folder-'+state);line.setAttribute('d',d);icon.append(line);}summary.append(icon);}
-  summary.append(title);if(project&&g.provider)summary.append(el('span','conversation-provider',g.provider==='codex'?'Codex':'Claude'));summary.append(count);
-  const opened=!!query.trim()||groupContains(g)||(conversationOpen.has(key)?conversationOpen.get(key):project&&g.defaultExpanded!==false);if(revealId&&groupContains(g))conversationOpen.set(key,true);details.open=!!opened;summary.onclick=e=>{e.preventDefault();details.open=!details.open;conversationOpen.set(key,details.open);};
-  if(g.subgroups?.length){body.append(el('p','conversation-help','原工具尚無專案分類，依工作資料夾收納。'));for(const sub of g.subgroups)body.append(groupView(sub,false));}
-  const moreKey=key+':more',all=!!query.trim()||groupContains(g)||conversationOpen.get(moreKey)===true,limit=project&&!all?5:g.roots.length;
-  for(const n of g.roots.slice(0,limit))body.append(branch(n));
-  if(project&&!g.count)body.append(el('p','conversation-empty','沒有對話'));
-  if(project&&g.roots.length>5&&!query.trim()){const more=el('button','conversation-more',all?'顯示較少':'顯示更多');more.onclick=()=>{conversationOpen.set(moreKey,!all);renderList();};body.append(more);}
-  details.append(summary,body);return details;
+  const project=g.kind==='project',codex=project&&g.provider==='codex',key=scope+':group:'+g.key;used.add(key);let item=listNodes.get(key);
+  if(!item){
+   item={details:el('details','conversation-group'+(topLevel?' folder-group':'')+(codex?' codex-project':'')),summary:el('summary'),title:el('span','conversation-group-title'),count:el('span','conversation-count'),body:el('div','conversation-group-body')};item.details.dataset.groupKey=g.key;
+   if(topLevel){const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('class','conversation-folder');icon.setAttribute('aria-hidden','true');for(const [state,d]of [['open','M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 7h16a2 2 0 0 1 2 3l-3 9H5a2 2 0 0 1-2-2Z'],['closed','M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z']]){const line=document.createElementNS(icon.namespaceURI,'path');line.setAttribute('class','folder-'+state);line.setAttribute('d',d);icon.append(line);}item.summary.append(icon);}
+   item.summary.append(item.title);if(project&&g.provider)item.summary.append(el('span','conversation-provider',g.provider==='codex'?'Codex':'Claude'));item.summary.append(item.count);item.details.append(item.summary,item.body);item.summary.onclick=e=>{e.preventDefault();conversationOpen.set(key,!item.details.open);renderList();};listNodes.set(key,item);
+  }
+  if(g.cantusFolderId)item.details.dataset.cantusFolderId=g.cantusFolderId;else delete item.details.dataset.cantusFolderId;
+  item.summary.title=g.path||g.source||g.name;if(item.title.textContent!==g.name)item.title.textContent=g.name;if(item.count.textContent!==String(g.count))item.count.textContent=String(g.count);
+  const opened=!!query.trim()||groupContains(g)||(conversationOpen.has(key)?conversationOpen.get(key):project&&g.defaultExpanded!==false);if(revealId&&groupContains(g))conversationOpen.set(key,true);item.details.open=!!opened;
+  const nodes=[];
+  if(opened){
+   if(g.subgroups?.length){item.help ||= el('p','conversation-help','原工具尚無專案分類，依工作資料夾收納。');nodes.push(item.help,...g.subgroups.map(sub=>groupView(sub,false)));}
+   const moreKey=key+':more',all=!!query.trim()||groupContains(g)||conversationOpen.get(moreKey)===true,limit=project&&!all?5:g.roots.length;nodes.push(...g.roots.slice(0,limit).map(n=>branch(n)));
+   if(project&&!g.count){item.empty ||= el('p','conversation-empty','沒有對話');nodes.push(item.empty);}
+   if(project&&g.roots.length>5&&!query.trim()){item.more ||= el('button','conversation-more');const label=all?'顯示較少':'顯示更多';if(item.more.textContent!==label)item.more.textContent=label;item.more.onclick=()=>{conversationOpen.set(moreKey,!all);renderList();};nodes.push(item.more);}
+  }
+  syncListChildren(item.body,nodes);return item.details;
  }
- for(const g of groups)list.append(groupView(g));
- if(!groups.length)list.append(el('div','empty','沒有符合的會話，試試其他關鍵字。'));list.scrollTop=scroll;
+ syncListChildren(list,groups.map(g=>groupView(g)));if(!groups.length)list.replaceChildren(el('div','empty','沒有符合的會話，試試其他關鍵字。'));
+ for(const key of listNodes.keys())if(!used.has(key))listNodes.delete(key);list.scrollTop=scroll;
 }
 function isBackgroundNotification(row){
   if(row.role!=='user'||typeof row.text!=='string')return false;
@@ -162,7 +195,7 @@ async function select(s){
     for(const row of visibleRows)body.append(messageArticle(row,s));
     for(const w of h.warnings||[])body.append(el('p','empty',w));
   }
-  try{const h=await api(base);if(seq===request)showPage(h);}catch(e){if(seq===request)body.replaceChildren(el('div','empty',friendlyNativeError(e)));}
+  try{const h=await api(base);if(seq!==request)return false;showPage(h);return true;}catch(e){if(seq===request)body.replaceChildren(el('div','empty',friendlyNativeError(e)));return false;}
 }
 let catalogRead=0;
 async function load(refresh=false){

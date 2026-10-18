@@ -45,7 +45,7 @@ async function postNative(action,body){
 select=async function(s){
   const generation=++nativeSelection;
   clearTimeout(nativePoll);
-  await originalSelect(s);if(selected!==s.id||generation!==nativeSelection)return;
+  const historyReady=originalSelect(s);if(selected!==s.id||generation!==nativeSelection)return;
   const transcript=el('div','transcript-scroll');transcript.append(...$('detail').childNodes);$('detail').append(transcript);
   if(s.managed)transcript.querySelector('.eyebrow').textContent=s.provider.toUpperCase()+(s.shared?' / SHARED SESSION':' / PANEL SESSION');
   const box=el('section','composer'),label=el('label','',s.shared?'接著聊 · '+(window.cantusPlatform?.label||'目前工作區')+' 共用對話':s.handoff?'接著聊 · Codex / Claude 接續':s.managed?'接著聊 · 面板獨立對話':'接著聊 · 原生 session');
@@ -72,7 +72,7 @@ select=async function(s){
     optimistic.append(el('small','delivery-state',p.state));transcript.insertBefore(optimistic,liveMessage);transcript.scrollTop=transcript.scrollHeight;
   }
   showPending(pendingSends.get(draftKey));
-  let available=false,busy=false,polling=false,sending=false,lastApproval='',lastStatus={};
+  let historyLoaded=false,available=false,busy=false,polling=false,sending=false,lastApproval='',lastStatus={};
   function renderQueue(){
     queueList.replaceChildren();const q=messageQueues.get(draftKey);if(!q?.items.length)return;
     queueList.append(el('p','native-note',q.reason||'已排隊 '+q.items.length+' 則 · 保持此分頁開啟，完成後依序送出。'));
@@ -86,7 +86,7 @@ select=async function(s){
   function renderStatus(v){
     if(v.routing){lastRoute={...v.routing,model:v.model||v.routing.model};previewRoute();}
     if(v.revision!==undefined)box.dataset.labRevision=String(v.revision);
-    lastStatus=v;busy=v.busy;send.disabled=sending||window.cantusPlatform?.role==='viewer'||(!available&&!busy);input.disabled=false;providerPicker.disabled=busy;stop.hidden=!busy;send.textContent=busy||messageQueues.get(draftKey)?.items.length?'加入排隊':'送出';
+    lastStatus=v;busy=v.busy;send.disabled=!historyLoaded||sending||window.cantusPlatform?.role==='viewer'||(!available&&!busy);input.disabled=false;providerPicker.disabled=busy;stop.hidden=!busy;send.textContent=busy||messageQueues.get(draftKey)?.items.length?'加入排隊':'送出';
     liveHead.lastChild.textContent=(v.provider||providerPicker.value)==='codex'?'Codex':'Claude';liveHead.firstChild.className='mini-avatar brand-icon brand-'+((v.provider||providerPicker.value)==='claude'?'claude':'codex');
     state.textContent=v.error?friendlyNativeError(v.error):(phases[v.phase]??'處理中…');
     if(v.phase==='completed'&&!v.historyUpdated)state.textContent='這則訊息先前已送出，請重新讀取記錄。';
@@ -113,7 +113,7 @@ select=async function(s){
   }
   send.onclick=async()=>{
     const pendingActive=pendingSends.get(draftKey),awaitingStatus=pendingActive&&pendingActive.requestId!==lastStatus.requestId&&['正在送出…','已送出'].includes(pendingActive.state);
-    if(sending||window.cantusPlatform?.role==='viewer'||(!busy&&!awaitingStatus&&!available)||!input.value.trim())return;
+    if(!historyLoaded||sending||window.cantusPlatform?.role==='viewer'||(!busy&&!awaitingStatus&&!available)||!input.value.trim())return;
     const text=input.value,requestId=crypto.randomUUID();
     if(busy||awaitingStatus||messageQueues.get(draftKey)?.items.length){
       const q=messageQueues.get(draftKey)||{id:s.id,items:[],waiting:lastStatus.requestId,paused:false};
@@ -130,7 +130,8 @@ select=async function(s){
   input.onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();send.click();}};
   stop.onclick=async()=>{stop.disabled=true;try{renderStatus(await postNative('stop',{id:s.id}));}catch(e){state.textContent=friendlyNativeError(e);}finally{stop.disabled=false;}};
   let capabilityRequest=0;
-  async function checkCapability(){const seq=++capabilityRequest,cap=await api('/api/native/capability?id='+encodeURIComponent(s.id)+'&provider='+providerPicker.value);if(selected!==s.id||generation!==nativeSelection||seq!==capabilityRequest)return;if(cap.routing&&!providerPicker.querySelector('option[value="auto"]')){const current=providerPicker.value,auto=el('option','','自動派工');auto.value='auto';providerPicker.prepend(auto);providerPicker.value=current;}available=cap.available;providerPicker.hidden=!cap.switchable;note.textContent=cap.available?cap.note:friendlyNativeError(cap.note);send.disabled=sending||window.cantusPlatform?.role==='viewer'||(!busy&&!available);input.disabled=false;if(cap.available)$('detail').querySelector('.pill').textContent=s.handoff?'跨 AI 接續':s.managed?'面板獨立對話':'可原生續聊';previewRoute();return cap;}
+  async function checkCapability(){const seq=++capabilityRequest,cap=await api('/api/native/capability?id='+encodeURIComponent(s.id)+'&provider='+providerPicker.value);if(selected!==s.id||generation!==nativeSelection||seq!==capabilityRequest)return;if(cap.routing&&!providerPicker.querySelector('option[value="auto"]')){const current=providerPicker.value,auto=el('option','','自動派工');auto.value='auto';providerPicker.prepend(auto);providerPicker.value=current;}available=cap.available;providerPicker.hidden=!cap.switchable;note.textContent=cap.available?cap.note:friendlyNativeError(cap.note);send.disabled=!historyLoaded||sending||window.cantusPlatform?.role==='viewer'||(!busy&&!available);input.disabled=false;if(cap.available)$('detail').querySelector('.pill').textContent=s.handoff?'跨 AI 接續':s.managed?'面板獨立對話':'可原生續聊';previewRoute();return cap;}
   providerPicker.onchange=async()=>{providerChoices.set(draftKey,providerPicker.value);send.disabled=true;available=false;try{await checkCapability();}catch(e){note.textContent=friendlyNativeError(e);}};
+  void historyReady.then(ok=>{if(selected!==s.id||generation!==nativeSelection||!box.isConnected)return;historyLoaded=ok!==false;send.disabled=!historyLoaded||sending||window.cantusPlatform?.role==='viewer'||(!available&&!busy);transcript.scrollTop=transcript.scrollHeight;});
   try{const cap=await checkCapability();if(cap?.available){$('context').append(el('label','','目前 AI 原生 Session ID'),el('p','',cap.sourceSessionId));}await poll();}catch(e){note.textContent=friendlyNativeError(e);}
 };

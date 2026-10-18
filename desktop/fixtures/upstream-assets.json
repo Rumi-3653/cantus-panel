@@ -1,0 +1,74 @@
+{
+  "files": [
+    {
+      "kind": "source",
+      "path": "index.html",
+      "sha256": "7ad7c90fe891eb4c25e0d480a2e7086da99009c5bba6035ca20383595b1bc211"
+    },
+    {
+      "kind": "source",
+      "path": "style.css",
+      "sha256": "8cab0985fc97cc0d2f33c25f616884a5b7f0947abe34c639727895f4d519735d"
+    },
+    {
+      "kind": "source",
+      "path": "live.css",
+      "sha256": "35833a87f1d50f92f7bd10abc1545ed4c6c3ae435cb3a1982afd2ff866cfd96f"
+    },
+    {
+      "kind": "source",
+      "path": "lineage.css",
+      "sha256": "d08911aa1f5a9647aa95d328ddb1a06d390459eb0868035ed7607f3f34683951"
+    },
+    {
+      "kind": "source",
+      "path": "platform-ui.js",
+      "sha256": "08ed771361e1d6d68524a5a29d02ae13a7aef90890e337a859715cae0de21b22"
+    },
+    {
+      "kind": "source",
+      "path": "app.js",
+      "sha256": "1c05025423f21328f703aca0a770166752ac70ec444c13312585f2f09dc341ac"
+    },
+    {
+      "kind": "source",
+      "path": "native-ui.js",
+      "sha256": "b3f2417130b8b7966b10f0314376fe0ffee2d7a3c084affb79cb8e2352e7741a"
+    },
+    {
+      "kind": "source",
+      "path": "lineage-ui.js",
+      "sha256": "f61b7fd0a22f3a2f47554d61305386a3ccf208b50647ebbedf3441d9fa16c42c"
+    },
+    {
+      "kind": "source",
+      "path": "live-ui.js",
+      "sha256": "f3f14d98294e5a49ac6627d910b805f1080321a60dfd37ac5c08e157d8999651"
+    },
+    {
+      "kind": "source",
+      "path": "conversation-tree.js",
+      "sha256": "c09982320a0a29c6bc2fcee6db1cddc328f8409f0195796d27a97d1f394b6ee0"
+    },
+    {
+      "kind": "source",
+      "path": "routing-rules.js",
+      "sha256": "ba43970dd4e9a9937db45f5d465b9c3c36f344981f2471ec4bd502e37d98c8ec"
+    },
+    {
+      "kind": "source",
+      "path": "routing-ui.js",
+      "sha256": "7fddee0d9e35b03cb5f2f63e9efc83cd9f557e3e0ae0ce2314f81653838f1293"
+    },
+    {
+      "kind": "source",
+      "path": "pair-ui.js",
+      "sha256": "209a3e3c517c04d2d16d3b784e53e008cef2eb1dd6b9510fb9c6e787038944d3"
+    },
+    {
+      "kind": "source",
+      "path": "organize-ui.js",
+      "sha256": "eba2824001178c84e43aa0642c1229705d29572340289b2466e20beaf4d37329"
+    }
+  ]
+}

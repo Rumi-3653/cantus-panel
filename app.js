@@ -45,7 +45,9 @@ async function api(url){
    let data=await r.json();current();
    if(!r.ok)throw Object.assign(Error(data.error||'讀取失敗'),{status:r.status,code:data.code});
    if(isCatalog){
-    if(data.notModified){if(!saved||data.catalogVersion!==saved.value.catalogVersion)throw Error('清單版本不一致');return saved.value;}
+    let status=$('catalog-cache-status');if(!status){status=el('p','native-note catalog-cache-status');status.id='catalog-cache-status';status.setAttribute('role','status');$('list').before(status);}
+    const cache=data.catalogCache;status.textContent=cache?.stale?(cache.failed?'清單更新失敗，暫顯先前快照；可按重新整理重試。':'先顯示清單快照，正在背景更新…'):'';status.hidden=!cache?.stale;
+    if(data.notModified){if(!saved||data.catalogVersion!==saved.value.catalogVersion)throw Error('清單版本不一致');data={...saved.value,catalogCache:data.catalogCache};catalogReadCache={key:cacheKey,value:data};return data;}
     if(data.delta){
      if(!saved)throw Error('清單缺少基準版本');
      const rows=new Map(saved.value.sessions.map(s=>[s.id,s]));for(const id of data.removed||[])rows.delete(id);for(const s of data.sessions)rows.set(s.id,s);

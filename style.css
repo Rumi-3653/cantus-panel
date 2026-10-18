@@ -282,3 +282,4 @@ body .app>.list-pane .list-tools button:hover{background:#dceff3}
 body .app>.list-pane .list-tools button:disabled{opacity:.4}
 .list-pane .search[hidden]{display:none}
 @media(max-width:360px){body .app>.list-pane .compact-heading h2{font-size:14px}body .app>.list-pane .compact-heading{padding-left:8px;padding-right:8px}}
+.catalog-cache-status{margin:0 16px 8px;flex:none}

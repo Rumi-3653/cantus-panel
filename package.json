@@ -1,6 +1,6 @@
 {
   "name": "cantus-panel",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "A calm workspace for Codex and Claude conversations. Portable, disconnected by default.",
   "license": "UNLICENSED",

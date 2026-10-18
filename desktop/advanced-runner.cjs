@@ -44,18 +44,20 @@ class AdvancedRunner extends ManagedRunner{
     if(value.method==='turn/completed'&&run.pauseRequested){if(p.turn?.status==='interrupted'){run.result=true;run.paused=true;run.child.stdin.end();return;}run.pauseRequested=false;}
    }
   }else if(!value.session_id||value.session_id===run.sid){
+   if(value.type==='control_response'&&run.pauseRequested&&String(value.response?.request_id)===run.pauseRpcId&&value.response?.subtype==='success'){run.pauseAcknowledged=true;this.log(run).controls.push({action:'pause_acknowledged',at:now()});}
    if(value.type==='assistant')for(const item of value.message?.content||[]){if(item.type==='tool_use')this.step(run,{id:item.id,type:'toolCall',tool:item.name,arguments:item.input});}
    if(value.type==='user')for(const item of value.message?.content||[])if(item.type==='tool_result')this.step(run,{id:item.tool_use_id,type:'toolCall',result:item.content,status:item.is_error?'failed':'completed'},true);
-   if(value.type==='result'){const row=this.log(run);row.usage=value.usage||null;if(Number.isFinite(value.total_cost_usd))row.costUSD=value.total_cost_usd;this.changed(run.id);if(run.pauseRequested){run.paused=true;run.result=true;run.claudeResultReceived=true;run.claudeTurnInProgress=false;run.child.stdin.end();return;}}
+   if(value.type==='result'){const row=this.log(run);row.usage=value.usage||null;if(Number.isFinite(value.total_cost_usd))row.costUSD=value.total_cost_usd;this.changed(run.id);if(run.pauseRequested&&run.pauseAcknowledged&&['aborted_tools','aborted_streaming','interrupted'].includes(value.terminal_reason)){run.paused=true;run.claudePauseConfirmed=true;run.result=true;run.claudeResultReceived=true;run.claudeTurnInProgress=false;row.controls.push({action:'pause_confirmed',terminalReason:value.terminal_reason,at:now()});this.finishClaude(run);return;}if(run.pauseRequested&&!value.is_error)run.pauseRequested=false;}
   }else throw fail('收到其他對話的事件，已停止。');
   return super.frame(run,value);
  }
  async complete(run){
   if(!run.verifiedSession)throw fail('未確認對話，無法完成回合。');
+  if(run.provider==='claude'&&run.paused&&(!run.pauseAcknowledged||!run.claudePauseConfirmed||run.claudeState!=='idle'||run.claudeTasks?.size||run.approvals.size))throw fail('原工具尚未確認暫停完成。');
   const record=this.records.get(run.id),text=[...run.texts.values()].join('\n\n');if(text)record.rows.push({role:'assistant',text,at:now()});run.phase=run.paused?'paused':'completed';run.historyUpdated=true;
   const row=this.log(run);row.phase=run.phase;row.endedAt=now();row.model=run.actualModel||run.selection?.model;for(const step of row.steps)if(step.status==='inProgress'){step.status=run.paused?'interrupted':'unknown';step.endedAt=now();}this.persist(run,run.phase);run.busy=false;run.finished=true;this.cleanup(run);
  }
- fail(run,error){try{super.fail(run,error);}catch{run.error='紀錄保存失敗；回合已停止，請核對記錄。';run.code='storage';}if(!this.owns(run.id))return;const row=this.log(run);row.phase=run.phase;row.error=run.error;row.endedAt=now();for(const step of row.steps)if(step.status==='inProgress'){step.status=run.phase==='stopped'?'interrupted':'failed';step.endedAt=now();}try{this.changed(run.id,true);}catch{clearTimeout(this.flushers.get(run.id));this.flushers.delete(run.id);run.error='紀錄保存失敗；回合已停止，請核對記錄。';run.code='storage';}}
+ fail(run,error){if(!run.finished&&!run.stopRequested&&run.provider==='claude'&&run.claudePauseConfirmed&&run.paused&&run.closed&&run.child?.exitCode===1&&run.claudeState==='idle'&&!run.claudeTasks?.size&&!run.approvals.size&&error.code==='provider')return this.complete(run).catch(e=>{run.claudePauseConfirmed=false;this.fail(run,e);});try{super.fail(run,error);}catch{run.error='紀錄保存失敗；回合已停止，請核對記錄。';run.code='storage';}if(!this.owns(run.id))return;const row=this.log(run);row.phase=run.phase;row.error=run.error;row.endedAt=now();for(const step of row.steps)if(step.status==='inProgress'){step.status=run.phase==='stopped'?'interrupted':'failed';step.endedAt=now();}try{this.changed(run.id,true);}catch{clearTimeout(this.flushers.get(run.id));this.flushers.delete(run.id);run.error='紀錄保存失敗；回合已停止，請核對記錄。';run.code='storage';}}
  approval(run,...args){super.approval(run,...args);this.log(run).phase=run.phase;this.changed(run.id,true);}
  answer(input){const value=super.answer(input),run=this.runs.get(input.id);this.log(run).controls.push({action:input.allow?'approved':'declined',at:now()});this.log(run).phase=run.phase;this.changed(run.id,true);return value;}
  async steer({id,text,requestId}){
@@ -68,6 +70,7 @@ class AdvancedRunner extends ManagedRunner{
  async pause(id){
   const run=this.runs.get(id);if(!run?.busy||run.finished||run.pauseRequested)throw fail('目前沒有可暫停的回合。');if(run.provider==='codex'&&!run.turnId)throw fail('正在建立回合，請稍候。');
   run.pauseRequested=true;run.phase='pausing';const row=this.log(run);row.phase=run.phase;row.controls.push({action:'pause_requested',at:now()});this.changed(id,true);
+  if(run.provider==='claude'){run.pauseRpcId=String(run.nextRpc);run.pauseAcknowledged=false;}
   try{await this.rpc(run,run.provider==='codex'?'turn/interrupt':'interrupt',run.provider==='codex'?{threadId:run.sid,turnId:run.turnId}:{});}catch(error){if(!run.finished&&!run.paused){run.pauseRequested=false;run.phase=run.approvals.size?'approval':'running';row.phase=run.phase;this.changed(id,true);throw error;}}return this.status(id);
  }
  async stop(id){const row=this.trace(id).runs.at(-1),run=this.runs.get(id);if(row?.phase==='paused'&&!run?.busy){row.phase='stopped';row.controls.push({action:'stop_paused',at:now()});if(run)run.phase='stopped';const record=this.records.get(id),delivery=record.deliveries.find(d=>d.requestId===row.requestId);if(delivery)delivery.phase='stopped';this.save(record);this.changed(id,true);return this.status(id);}return super.stop(id);}

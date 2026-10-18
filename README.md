@@ -1,8 +1,10 @@
 <div align="center">
 
-# Cantus
+# Weftelio
 
 ### 眾聲並作，所託如一。
+
+原名 Cantus Panel，現已更名為 **Weftelio**。[改名與相容性說明](docs/RENAMING.md)
 
 讓散落在 Codex 與 Claude 裡的對話，回到同一個安靜的工作空間。
 
@@ -14,7 +16,7 @@
 
 ## 六個介面
 
-把工作空間、對話、執行中的指示、執行紀錄、工作拆分樹與任務看板，整合進同一套 Cantus。六個介面分布在 **Work、Lineage、Live、Task** 四個桌面視角裡。
+把工作空間、對話、執行中的指示、執行紀錄、工作拆分樹與任務看板，整合進同一套 Weftelio。六個介面分布在 **Work、Lineage、Live、Task** 四個桌面視角裡。
 
 | 介面 | 你可以做什麼 | 在哪裡 |
 | --- | --- | --- |
@@ -60,26 +62,26 @@ npm run start:desktop
 
 ### Task · 四欄任務看板
 
-![Cantus Task：四欄水平任務看板，顯示虛構測試任務](docs/images/desktop-task.jpg)
+![Weftelio Task：四欄水平任務看板，顯示虛構測試任務](docs/images/desktop-task.jpg)
 
 ### Work · 對話、執行中指示與執行紀錄
 
-![Cantus Work：中間為虛構對話與 Agent Steering，右側為 Agent Run 執行紀錄](docs/images/desktop-agent-run.jpg)
+![Weftelio Work：中間為虛構對話與 Agent Steering，右側為 Agent Run 執行紀錄](docs/images/desktop-agent-run.jpg)
 
 ### 視覺概念
 
-![Cantus 概念展示圖：所有名稱與對話皆為虛構](docs/images/workspace-concept.png)
+![Weftelio 概念展示圖：所有名稱與對話皆為虛構](docs/images/workspace-concept.png)
 
-> 這張圖由 AI 製作，展示視覺方向；實際介面請看上方桌面截圖及下方登入截圖。
+> AI 概念圖，用來展示視覺方向；實際介面請看上方桌面截圖與下方登入截圖。
 
 ### 登入 · 桌面
 
-![Cantus 桌面登入：空白帳密欄位與像素角色](docs/images/login-desktop.png)
+![Weftelio 桌面登入：空白帳密欄位與像素角色](docs/images/login-desktop.jpg)
 
 ### 登入 · 手機
 
 <div align="center">
-<img src="docs/images/login-mobile.png" width="320" alt="Cantus 手機登入畫面，不含帳號與密碼">
+<img src="docs/images/login-mobile.jpg" width="320" alt="Weftelio 手機登入畫面，不含帳號與密碼">
 </div>
 
 四隻像素小角色陪你進入工作區；開啟系統「減少動態效果」時會停止動態。截圖只展示空白表單，沒有任何登入資料。
@@ -89,8 +91,8 @@ npm run start:desktop
 需要 **Node.js 24 或更新版本**。沒有需要下載的 npm 套件；來源讀取元件已放在 `vendor/`。
 
 ```bash
-git clone https://github.com/arumwu/cantus-panel.git
-cd cantus-panel
+git clone https://github.com/arumwu/weftelio.git
+cd weftelio
 npm run start:desktop
 ```
 
@@ -147,6 +149,6 @@ docs/                           設定、隱私、展示素材
 
 ## 授權與聲明
 
-Cantus 目前未提供開源授權（`UNLICENSED`）；公開可見與允許自由再利用是不同的事。第三方元件沿用其原始 MIT 授權，見 [第三方聲明](vendor/session-exporter/NOTICE) 與 [LICENSE](vendor/session-exporter/LICENSE)。
+Weftelio 目前未提供開源授權（`UNLICENSED`）；公開可見與允許自由再利用是不同的事。第三方元件沿用其原始 MIT 授權，見 [第三方聲明](vendor/session-exporter/NOTICE) 與 [LICENSE](vendor/session-exporter/LICENSE)。
 
 這是獨立專案，並非 OpenAI 或 Anthropic 官方產品。Codex 與 Claude 名稱及商標屬於各自權利人。

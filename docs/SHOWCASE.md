@@ -1,9 +1,11 @@
-# 展示素材
+# Weftelio 展示素材
 
-`images/workspace-concept.png`：imagegen 內建工具生成，使用空白登入截圖作為色彩與氛圍參考。不是程式畫面的截圖。
+`images/desktop-task.jpg`、`images/desktop-agent-run.jpg`：從 Weftelio 桌面版擷取的實際畫面，僅使用虛構示範資料，不連接帳號、不啟動 AI。
 
-`images/login-desktop.png`、`images/login-mobile.png`：真實登入版型截圖，欄位皆空白。
+`images/login-desktop.jpg`、`images/login-mobile.jpg`：Weftelio 真實登入版型，帳號與密碼欄位皆空白。
 
-## 概念圖最終提示詞
+改名只更新品牌文字與品牌字母；沿用原有圖形、外框、配色與版面。`images/workspace-concept.png` 由內建 imagegen 依舊版概念圖更新，只更換兩處品牌名稱並補上 Task 頁籤；它是 AI 概念圖，不是程式截圖。舊圖保存在備份與 Git 歷史。
 
-Use case: ui-mockup. Asset type: GitHub repository showcase banner, landscape 16:9. Input image 1 is only a palette and mood reference for an existing app named Cantus. Create a beautiful editorial presentation of its conversation workspace using entirely fictional data, explicitly labelled conceptual rather than a screenshot. Calm white glass panels, very pale icy cyan and blush background, subtle slate typography, turquoise accents, exquisite spacing. At top large exact text 'Cantus' and subtitle 'Many voices. One intent.' Main centered desktop app panel front facing, header tabs 'Work', 'Lineage', 'Live'; left slim navigation with 'Workspace', 'Codex', 'Claude'; next column fictional projects 'Morning Studio', 'Story Notes', conversations 'Brand refresh', 'Design system', 'Homepage details'; main conversation pane title 'Brand refresh' with short readable synthetic messages 'Let’s give the homepage more breathing room.' and 'A clear headline. Gentle colors. Room to focus.' A small side context card says 'Demo workspace' and 'No accounts connected'. Four tiny white pixel animal mascots inspired by reference at bottom: cat penguin rabbit fox. Footer prominently and legibly says 'CONCEPT MOCKUP · FICTIONAL DATA'. Keep concept tasteful and close to calm practical software, not sci-fi. No real person names, addresses, server identifiers, IPs, emails, domains, account details, credentials or actual customer data. No claims of completed work or live AI results. Output one polished landscape raster image.
+## 概念圖更新提示詞（內建 imagegen）
+
+Use case: text-localization. Asset type: existing GitHub README concept showcase image. Input image 1 is the edit target, not a loose reference. Rename the software shown in the image from Cantus to Weftelio. Replace BOTH occurrences of the word Cantus (large top heading and small upper-left app wordmark) with the exact text 'Weftelio', spelled W e f t e l i o, preserving typography weight and color and adjusting width naturally. Update the concept app navigation from Work / Lineage / Live to Work / Lineage / Live / Task, using the existing tab style. Keep all other image elements, layout, colors, logo silhouette, icy cyan and blush background, glass app frame, fictional conversation content, four pixel mascots, English tagline 'Many voices. One intent.', and bottom 'CONCEPT MOCKUP · FICTIONAL DATA' disclaimer unchanged. No new branding design, no recoloring, no real personal data. This remains a conceptual mockup, not a screenshot.

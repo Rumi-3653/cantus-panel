@@ -1,4 +1,4 @@
-/* Cantus-only labels and virtual folders. Never rename or move source files. */
+/* Weftelio-only labels and virtual folders. Never rename or move source files. */
 (()=>{
  const editable=()=>window.cantusPlatform?.mode!=='cloud'||window.cantusPlatform.authenticated&&window.cantusPlatform.role==='editor';
  const menu=el('div','cantus-context-menu');menu.hidden=true;menu.setAttribute('role','menu');document.body.append(menu);
@@ -8,10 +8,10 @@
  document.addEventListener('cantus-platform-change',()=>{closeMenu();dialog.close();});document.addEventListener('cantus-login-expired',()=>{closeMenu();dialog.close();});
  async function edit({title,value='',action,id,folderId,endpoint,requester,onSaved}){
   if(!editable())return;const platform=window.cantusPlatform,generation=platform?.generation,request=requester||((url,options)=>(platform?.fetch||fetch)(url,options));
-  heading.textContent=title;field.replaceChildren();note.textContent='只修改 Cantus 顯示與分類，原始對話、專案及檔案不變。';error.textContent='';save.disabled=true;dialog.showModal();
+  heading.textContent=title;field.replaceChildren();note.textContent='只修改 Weftelio 顯示與分類，原始對話、專案及檔案不變。';error.textContent='';save.disabled=true;dialog.showModal();
   let graph,input;
   try{const response=await request(endpoint||'/api/lineage');graph=await response.json();if(!response.ok)throw Error(graph.error);if(generation!==platform?.generation||!dialog.open)return;
-   if(action==='moveFolder'){input=el('select');const original=el('option','','原始分類（不放入 Cantus 資料夾）');original.value='';input.append(original);for(const f of graph.folders||[]){const option=el('option','',f.name);option.value=f.id;input.append(option);}input.value=folderId||'';}
+   if(action==='moveFolder'){input=el('select');const original=el('option','','原始分類（不放入 Weftelio 資料夾）');original.value='';input.append(original);for(const f of graph.folders||[]){const option=el('option','',f.name);option.value=f.id;input.append(option);}input.value=folderId||'';}
    else{input=el('input');input.value=value;input.maxLength=action==='rename'?300:100;input.required=true;}
    input.setAttribute('aria-label',title);field.append(input);save.disabled=false;input.focus();input.select?.();
   }catch(e){error.textContent=e.message;return;}
@@ -25,10 +25,10 @@
  function show(e,choices){e.preventDefault();e.stopPropagation();menu.replaceChildren();for(const [label,run]of choices){const button=el('button','',label);button.type='button';button.setAttribute('role','menuitem');button.onclick=()=>{closeMenu();run();};menu.append(button);}menu.hidden=false;menu.style.left=Math.min(e.clientX,innerWidth-190)+'px';menu.style.top=Math.min(e.clientY,innerHeight-menu.offsetHeight-8)+'px';menu.firstChild?.focus();}
  document.addEventListener('contextmenu',e=>{
   if(!editable())return;const row=e.target.closest('.conversation-item'),group=e.target.closest('.conversation-group');
-  if(row){const session=catalog.sessions.find(s=>s.id===row.dataset.sessionId);if(!session)return;show(e,[['重新命名',()=>edit({title:'重新命名對話',value:name(session),action:'rename',id:session.id})],['移至資料夾',()=>edit({title:'移至 Cantus 資料夾',action:'moveFolder',id:session.id,folderId:session.cantusFolder?.id})]]);}
+  if(row){const session=catalog.sessions.find(s=>s.id===row.dataset.sessionId);if(!session)return;show(e,[['重新命名',()=>edit({title:'重新命名對話',value:name(session),action:'rename',id:session.id})],['移至資料夾',()=>edit({title:'移至 Weftelio 資料夾',action:'moveFolder',id:session.id,folderId:session.cantusFolder?.id})]]);}
   else if(group?.dataset.cantusFolderId){const folder=catalog.cantusFolders?.find(f=>f.id===group.dataset.cantusFolderId);if(folder)show(e,[['重新命名',()=>edit({title:'重新命名資料夾',value:folder.name,action:'renameFolder',id:folder.id})]]);}
  });
- const add=el('button','new-cantus-folder','＋ 新增資料夾');add.type='button';add.onclick=()=>edit({title:'新增 Cantus 資料夾',action:'createFolder'});document.querySelector('.list-pane .search').after(add);
+ const add=el('button','new-cantus-folder','＋ 新增資料夾');add.type='button';add.onclick=()=>edit({title:'新增 Weftelio 資料夾',action:'createFolder'});document.querySelector('.list-pane .search').after(add);
  const update=()=>{add.disabled=!editable();};document.addEventListener('cantus-platform-change',update);document.addEventListener('cantus-login-expired',update);update();
  window.CantusOrganize={edit,show,editable};
  // Reuse existing actions; compact controls never create a second dispatch path.

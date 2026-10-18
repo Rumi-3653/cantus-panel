@@ -1,4 +1,4 @@
-/* Original Cantus rendering, informed by the inspected public interaction pattern. */
+/* Original Weftelio rendering, informed by the inspected public interaction pattern. */
 (()=>{
  const ns='http://www.w3.org/2000/svg';let cleanup=()=>{};
  const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};

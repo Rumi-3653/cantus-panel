@@ -27,7 +27,28 @@ window.cantusOpenWork=async target=>{
 };
 const conversationOpen=new Map();
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',4500);}
-async function api(url){const generation=window.cantusPlatform?.generation;if(url.startsWith('/api/sessions'))url+=(url.includes('?')?'&':'?')+'background=1';const r=await (window.cantusPlatform?.fetch||fetch)(url);const data=await r.json();if(generation!==window.cantusPlatform?.generation)throw Error('平台已切換，已略過舊回應');if(!r.ok)throw Error(data.error||'讀取失敗');return data;}
+async function api(url){
+ const generation=window.cantusPlatform?.generation;
+ const current=()=>{if(generation!==window.cantusPlatform?.generation)throw Object.assign(Error('平台已切換，已略過舊回應'),{code:'platform-changed'});};
+ if(url.startsWith('/api/sessions'))url+=(url.includes('?')?'&':'?')+'background=1';
+ for(let attempt=0;attempt<2;attempt++){
+  current();
+  try{
+   const r=await (window.cantusPlatform?.fetch||fetch)(url);current();
+   if([502,503,504].includes(r.status))throw Object.assign(Error('目前連線不穩，請稍後再試。'),{status:r.status});
+   if(r.status===401)throw Object.assign(Error('登入已失效，請重新登入後再試。'),{status:401});
+   const data=await r.json();current();
+   if(!r.ok)throw Object.assign(Error(data.error||'讀取失敗'),{status:r.status,code:data.code});
+   return data;
+  }catch(e){
+   current();
+   const freshHistory=url.startsWith('/api/history?')&&!new URLSearchParams(url.split('?')[1]).has('before');
+   if(attempt===0&&e.code==='stale'&&freshHistory){await api('/api/sessions?refresh=1');current();continue;}
+   if(attempt===0&&([502,503,504].includes(e.status)||/network|fetch|load failed|connection|offline|ECONN|ENOTFOUND/i.test(e.message))){await new Promise(resolve=>setTimeout(resolve,400));continue;}
+   throw e;
+  }
+ }
+}
 function visible(){return catalog.sessions.filter(s=>filter==='all'||filter==='projects'||filter===s.provider||filter==='today'&&new Date(s.updatedAt).toDateString()===new Date().toDateString());}
 function visibleProjects(){return (catalog.projects||[]).filter(p=>filter==='all'||filter==='projects'||filter===p.provider);}
 function renderList(revealId){
@@ -90,7 +111,7 @@ function friendlyNativeError(error){
  if(/busy|locked|already.*running|active writer/i.test(raw))return '這個對話正在執行，請等它完成後再試。';
  if(/conflict|revision|stale|409/i.test(raw))return '對話狀態已更新，請重新整理後再試。';
  if(/timeout|timed out/i.test(raw))return '等候回應逾時，請稍後查看結果。';
- if(/network|fetch|connection|offline|ECONN|ENOTFOUND|502|503|504/i.test(raw))return '目前連線不穩，請稍後再試。';
+ if(/network|fetch|load failed|connection|offline|ECONN|ENOTFOUND|502|503|504/i.test(raw))return '目前連線不穩，請稍後再試。';
  if(/not found|404|no such/i.test(raw))return '找不到這個對話或資料，請重新整理後再試。';
  if(/cancelled|canceled|aborted|stopped/i.test(raw))return '這次操作已停止。';
  if(/[\u3400-\u9fff]/.test(raw)&&raw.length<100&&!/[\r\n{}]|\b(?:Error|Exception|thread|stack|stderr)\b/i.test(raw)&&!/[a-z]{12}/i.test(raw))return raw;
@@ -143,8 +164,22 @@ async function select(s){
   }
   try{const h=await api(base);if(seq===request)showPage(h);}catch(e){if(seq===request)body.replaceChildren(el('div','empty',friendlyNativeError(e)));}
 }
-async function load(refresh=false){$('refresh').disabled=true;$('connection').textContent='正在讀取來源';try{catalog=await api('/api/sessions'+(refresh?'?refresh=1':''));$('allCount').textContent=catalog.sessions.length;$('projectCount').textContent=CantusConversations.build(catalog.sessions).filter(g=>g.kind==='project').length;$('todayCount').textContent=catalog.sessions.filter(s=>new Date(s.updatedAt).toDateString()===new Date().toDateString()).length;$('providers').replaceChildren();$('warnings').replaceChildren();for(const p of ['codex','claude'])$(p+'Count').textContent='—';for(const p of catalog.providers){$(p.provider+'Count').textContent=p.count;const c=el('div','glass-card'),d=el('div');d.append(el('strong','',p.provider==='codex'?'Codex':'Claude'),el('p','',p.supported?'來源索引已讀取':'無法讀取'));c.append(brandIcon(p.provider,'source-icon'),d,el('span','source-number',p.count));$('providers').append(c);for(const w of p.warnings||[])$('warnings').append(el('p','',w));}renderList();$('connection').textContent=catalog.demo?'虛構資料示範 · 未連接帳號':`${catalog.providers.filter(p=>p.supported).length} 個來源已連接`;if(catalog.demo){document.querySelector('.sidebar-bottom').textContent='虛構資料示範 · 不會呼叫 AI';document.querySelector('.edition').textContent='DEMO';document.querySelector('.inspector .glass-card p').textContent='未連接任何帳號';};if(refresh&&selected){const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s,{background:true});}}catch(e){$('connection').textContent='連接失敗';$('list').replaceChildren(el('div','empty',friendlyNativeError(e)));}finally{$('refresh').disabled=false;}}
-document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===b));renderList();});$('search').oninput=renderList;$('refresh').onclick=()=>load(true);document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();$('search').focus();}});$('work').onclick=()=>{filter='all';renderList();};$('lineage').onclick=()=>toast('目前以右側來源與專案位置呈現脈絡；跨會話關聯尚未接入。');$('live').onclick=()=>toast('選取會話後可在下方續聊、確認權限及停止面板啟動的回合。');load();
+let catalogRead=0;
+async function load(refresh=false){
+ const generation=window.cantusPlatform?.generation,ticket=++catalogRead,current=()=>generation===window.cantusPlatform?.generation&&ticket===catalogRead;
+ $('refresh').disabled=true;$('connection').textContent='正在讀取來源';
+ try{
+  const next=await api('/api/sessions'+(refresh?'?refresh=1':''));if(!current())return;catalog=next;
+  $('allCount').textContent=catalog.sessions.length;$('projectCount').textContent=CantusConversations.build(catalog.sessions).filter(g=>g.kind==='project').length;$('todayCount').textContent=catalog.sessions.filter(s=>new Date(s.updatedAt).toDateString()===new Date().toDateString()).length;
+  $('providers').replaceChildren();$('warnings').replaceChildren();for(const p of ['codex','claude'])$(p+'Count').textContent='—';
+  for(const p of catalog.providers){$(p.provider+'Count').textContent=p.count;const c=el('div','glass-card'),d=el('div');d.append(el('strong','',p.provider==='codex'?'Codex':'Claude'),el('p','',p.supported?'來源索引已讀取':'無法讀取'));c.append(brandIcon(p.provider,'source-icon'),d,el('span','source-number',p.count));$('providers').append(c);for(const w of p.warnings||[])$('warnings').append(el('p','',w));}
+  renderList();$('connection').textContent=`${catalog.providers.filter(p=>p.supported).length} 個來源已連接`;
+  if(catalog.demo)$('connection').textContent='虛構資料示範 · 未連接帳號';if(catalog.demo){document.querySelector('.sidebar-bottom').textContent='虛構資料示範 · 不會呼叫 AI';document.querySelector('.edition').textContent='DEMO';document.querySelector('.inspector .glass-card p').textContent='未連接任何帳號';};
+  if(refresh&&selected){const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s,{background:true});}
+ }catch(e){if(!current())return;$('connection').textContent='連接失敗';$('list').replaceChildren(el('div','empty',friendlyNativeError(e)));}
+ finally{if(current())$('refresh').disabled=false;}
+}
+document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===b));renderList();});$('search').oninput=renderList;$('refresh').onclick=()=>load(true);document.addEventListener('keydown',e=>{if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){e.preventDefault();$('search').closest('.search').hidden=false;$('search').focus();}});$('work').onclick=()=>{filter='all';renderList();};$('lineage').onclick=()=>toast('目前以右側來源與專案位置呈現脈絡；跨會話關聯尚未接入。');$('live').onclick=()=>toast('選取會話後可在下方續聊、確認權限及停止面板啟動的回合。');load();
 // Decorative companions stay outside the clipped frame; petting only changes their cheeks.
 (()=>{
  const frame=document.querySelector('.app');if(!frame)return;
@@ -179,7 +214,7 @@ document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.da
 document.addEventListener('DOMContentLoaded',()=>{
  const app=document.querySelector('.app'),header=app?.querySelector('header');if(!header)return;
  const media=matchMedia('(max-width:780px), (max-width:1024px) and (max-height:600px) and (pointer:coarse)'),sidebar=document.querySelector('.sidebar'),inspector=document.querySelector('.inspector');
- const create=document.querySelector('.panel-create'),createHome=document.createComment('create position');
+ const create=document.querySelector('.panel-create:not(.compact-create)'),createHome=document.createComment('create position');
  const sidebarHome=document.createComment('sidebar position'),inspectorHome=document.createComment('inspector position');
  sidebar.before(sidebarHome);inspector.before(inspectorHome);create?.before(createHome);
  const button=(label,cls,text=label)=>{const b=el('button',cls,text);b.type='button';b.setAttribute('aria-label',label);return b;};

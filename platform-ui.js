@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
    const changed=JSON.stringify(catalog)!==JSON.stringify(c);catalog=c;
    if(changed){renderList();$('allCount').textContent=c.sessions.length;$('projectCount').textContent=CantusConversations.build(c.sessions).filter(g=>g.kind==='project').length;}
   }catch{/* Keep the last list and the current draft during a transient outage. */}finally{checking=false;}
- },2500);
+ },15000);
  const box=el('div','platform-box'),label=el('p','native-note','本機工作區 · 未設定遠端連線');box.append(label);document.querySelector('.intro').after(box);
  try{
   const response=await fetch('/api/bootstrap');if(!response.ok)return;const boot=await response.json(),platform=window.cantusPlatform;

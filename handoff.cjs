@@ -41,10 +41,11 @@ class HandoffRunner{
   save(r){fs.mkdirSync(this.root,{recursive:true,mode:0o700});const file=path.join(this.root,r.id+'.json'),tmp=file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(r)+'\n',{mode:0o600});fs.renameSync(tmp,file);}
   base(id){return id.startsWith('panel_')?this.managed:this.native.runner;}
   entry(id){return this.managed.list().find(s=>s.id===id)||this.lookup(id);}
-  list(){return [...this.records.values()].map(r=>({...r.entry,provider:r.provider,handoff:true,managed:true,source:'Codex / Claude 接續對話',updatedAt:r.updatedAt}));}
+  list(){return [...this.records.values()].map(r=>({...r.entry,provider:r.entry.provider,sourceProvider:r.entry.provider,activeProvider:r.provider,handoff:true,managed:true,source:'Codex / Claude 接續對話',updatedAt:r.updatedAt}));}
   async allRows(id){
     if(id.startsWith('panel_')){const r=this.managed.records.get(id);if(!r)throw fail('找不到會話',404);return r.rows.map(row=>({...row}));}
-    let h=await this.native.runner.history(id),rows=h.rows,bytes=Buffer.byteLength(JSON.stringify(rows));
+    let h=await this.native.runner.history(id,{handoff:true}),rows=h.rows,bytes=Buffer.byteLength(JSON.stringify(rows));
+    if(bytes>32*1024*1024)throw fail('對話文字超過 32 MiB 交接上限；原始紀錄未變更');
     if(h.active===true)throw fail('原始會話仍在執行，請等待完成');
     while(h.hasMore){h=await this.native.runner.history(id,{before:h.nextBefore,pageSignature:h.pageSignature});rows=[...h.rows,...rows];bytes+=Buffer.byteLength(JSON.stringify(h.rows));if(bytes>32*1024*1024)throw fail('對話文字超過 32 MiB 交接上限；原始紀錄未變更');}
     return rows;

@@ -169,7 +169,7 @@ body{padding-top:42px}
  body .app .message-head{font-size:11px}
  body .app .history-pages{flex-wrap:wrap;gap:8px}
  body .app .history-pages button,body .app .message summary{min-height:44px;padding:10px}
- body .app .composer{display:grid;grid-template-columns:44px 44px minmax(0,1fr) 44px 44px;gap:6px;align-items:center;flex:none;width:calc(100% - 16px);max-height:65%;overflow:auto;margin:8px;padding:8px;border:1px solid #dbe7ed;border-radius:22px;background:#fff;box-shadow:0 2px 10px #254b5910}
+ body .app .composer{display:grid;grid-template-columns:44px 100px minmax(0,1fr) 44px 44px;gap:4px;align-items:center;flex:none;width:calc(100% - 16px);max-height:65%;overflow:auto;margin:8px;padding:8px;border:1px solid #dbe7ed;border-radius:22px;background:#fff;box-shadow:0 2px 10px #254b5910}
  body .app .composer>label{grid-column:1/-1;grid-row:1;font-size:0;min-width:0}
  body .app .composer textarea{display:block;width:100%;min-height:46px;max-height:128px;margin:0;padding:8px;font-size:16px;line-height:24px;resize:none;border:0;border-radius:12px;background:transparent;box-shadow:none;overscroll-behavior:contain}
  body .app .composer:focus-within{border-color:#9bcfd7;box-shadow:0 0 0 2px #009eae12}
@@ -180,11 +180,12 @@ body{padding-top:42px}
  body .app .composer .mobile-composer-tools{display:block;grid-column:1;grid-row:2;width:44px;height:44px;border-radius:50%;background:transparent;color:#567887;font-size:25px}
  body .app .composer .native-state{grid-column:3;grid-row:2;min-width:0;font-size:11px;line-height:1.5;max-height:44px;overflow:auto}
  body .app .composer .native-state:empty,body .app .composer .native-state[data-quiet="true"]{display:none}
- body .app .composer>.native-note,body .app .composer>.routing-chat-note{display:none}
+ body .app .composer>.native-note{display:none}
+ body .app .composer>.routing-chat-note:not([hidden]){display:block;grid-column:1/-1;margin:0;font-size:12px;line-height:1.5}
  body .app .composer.mobile-tools-open>.native-note,body .app .composer.mobile-tools-open>.routing-chat-note:not([hidden]){display:block;grid-column:1/-1;line-height:1.6;font-size:12px;margin:0;max-height:88px;overflow:auto}
  body .app .composer .mobile-composer-controls{display:contents}
- body .app .composer .provider-picker{grid-column:2;grid-row:2;z-index:1;width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;font-size:16px;margin:0;padding:0;opacity:0;cursor:pointer}
- body .app .composer .mobile-route-icon{grid-column:2;grid-row:2;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:transparent;color:#567887;pointer-events:none}
+ body .app .composer .provider-picker{grid-column:2;grid-row:2;z-index:1;width:100px;min-width:100px;max-width:100px;height:44px;min-height:44px;font-size:16px;margin:0;padding:0 24px 0 8px;opacity:1;cursor:pointer}
+ body .app .composer .mobile-route-icon{display:none}
  body .app .composer .mobile-route-icon svg{width:23px;height:23px}
  body .app .composer:has(.provider-picker:focus-visible) .mobile-route-icon{outline:2px solid var(--teal);outline-offset:2px}
  body .app .composer:has(.provider-picker:disabled) .mobile-route-icon{opacity:.45}
@@ -263,3 +264,17 @@ body{padding-top:42px}
 .mini-avatar.brand-icon{background-color:transparent;border-radius:0}
 .nav .provider-mark{font-size:0;width:22px;height:22px;border:0;border-radius:0;box-shadow:none;background:var(--brand-codex) center/contain no-repeat}
 .nav .provider-mark.claude{background-image:var(--brand-claude)}
+/* Compact list toolbar: small glyphs with touch-sized hit areas. */
+body .app>.list-pane .compact-heading{padding:10px 12px;gap:4px;flex-wrap:nowrap}
+.compact-heading>.list-tools{display:flex;align-items:center;gap:0;flex:none}
+.compact-heading>div:first-child{min-width:0}
+.compact-heading .eyebrow{display:none}
+body .app>.list-pane .compact-heading h2{font-size:16px;white-space:nowrap}
+body .app>.list-pane .list-tools .panel-create{display:flex;margin:0;padding:0;gap:0}
+body .app>.list-pane .list-tools button{display:grid;place-items:center;width:40px;height:44px;min-height:44px;flex:none;padding:0;margin:0;border:0;border-radius:8px;background:transparent;color:#68838e;font-size:22px}
+body .app>.list-pane .list-tools button[hidden]{display:none}
+.list-tools button svg{width:19px;height:19px}
+body .app>.list-pane .list-tools button:hover{background:#dceff3}
+body .app>.list-pane .list-tools button:disabled{opacity:.4}
+.list-pane .search[hidden]{display:none}
+@media(max-width:360px){body .app>.list-pane .compact-heading h2{font-size:14px}body .app>.list-pane .compact-heading{padding-left:8px;padding-right:8px}}

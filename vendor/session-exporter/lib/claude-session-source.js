@@ -189,6 +189,9 @@ class ClaudeSessionSource {
       if (!body || /^\s*<(command-|local-command|system-reminder)/.test(body)) return;
       if (item.type === 'user') lifecycle = { state: 'busy', event: 'user', at: iso(item.timestamp) };
       if (item.type === 'assistant' && !['end_turn', 'max_tokens', 'tool_use'].includes(item.message?.stop_reason)) lifecycle = { state: 'unknown', event: 'assistant', at: iso(item.timestamp) };
+      // Claude records a quota-rejected turn as an API error, not end_turn.
+      // Only this explicit terminal record is idle; missing/unknown endings stay blocked.
+      if (item.type === 'assistant' && item.isApiErrorMessage === true && item.error === 'rate_limit' && item.message.stop_reason === 'stop_sequence') lifecycle = { state: 'idle', event: 'rate_limit', at: iso(item.timestamp) };
       const duplicate = item.uuid ? digest(item.type + item.uuid + body) : null; if (duplicate && seen.has(duplicate)) return; if (duplicate) seen.add(duplicate);
       budget.text += Buffer.byteLength(body); budget.rows++;
       if (!page && (budget.text > LIMITS.textBytes || budget.rows > LIMITS.rows)) throw fail('limit');

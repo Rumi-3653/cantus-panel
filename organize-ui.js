@@ -31,4 +31,21 @@
  const add=el('button','new-cantus-folder','＋ 新增資料夾');add.type='button';add.onclick=()=>edit({title:'新增 Cantus 資料夾',action:'createFolder'});document.querySelector('.list-pane .search').after(add);
  const update=()=>{add.disabled=!editable();};document.addEventListener('cantus-platform-change',update);document.addEventListener('cantus-login-expired',update);update();
  window.CantusOrganize={edit,show,editable};
+ // Reuse existing actions; compact controls never create a second dispatch path.
+ {
+ const heading=document.querySelector('.list-pane .pane-heading'),search=document.querySelector('.list-pane .search'),input=search?.querySelector('input'),create=document.querySelector('.panel-create');
+ if(heading&&input&&create){
+  const icon=(button,label,paths)=>{button.title=label;button.setAttribute('aria-label',label);button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';};
+  const tools=el('div','list-tools'),toggle=el('button','icon-btn');toggle.type='button';
+  icon(toggle,'搜尋會話、專案','<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>');
+  search.id='conversation-search';toggle.setAttribute('aria-controls',search.id);
+  const expand=open=>{search.hidden=!open;toggle.setAttribute('aria-expanded',String(open));};
+  expand(Boolean(input.value));toggle.onclick=()=>{expand(search.hidden);if(!search.hidden)input.focus();};
+  input.addEventListener('keydown',e=>{if(e.key==='Escape'){input.value='';input.dispatchEvent(new Event('input',{bubbles:true}));expand(false);toggle.focus();}});
+  const newChat=create.querySelector('button[data-provider="auto"]');
+  icon(newChat,'新對話','<path d="M14 4H5a2 2 0 0 0-2 2v13l4-3h12a2 2 0 0 0 2-2v-4M18 2v6m-3-3h6"/>');
+  icon(add,'新增資料夾','<path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z M12 10v7m-3-3.5h6"/>');
+  create.classList.add('compact-create');tools.append(toggle,heading.querySelector('#refresh'),create,add);heading.append(tools);heading.classList.add('compact-heading');
+ }
+ }
 })();

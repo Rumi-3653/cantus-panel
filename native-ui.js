@@ -32,7 +32,7 @@ async function drainQueue(key,q){
 setInterval(()=>{for(const [key,q] of messageQueues)void drainQueue(key,q);},900);
 addEventListener('beforeunload',e=>{if([...messageQueues.values()].some(q=>q.items.length)){e.preventDefault();e.returnValue='';}});
 const createBox=el('div','panel-create');
-for(const provider of ['auto','codex','claude']){const button=el('button','nav',provider==='auto'?'＋ 新對話':'＋ 新 '+(provider==='codex'?'Codex':'Claude')+' 對話');button.dataset.provider=provider;button.hidden=provider!=='auto';button.onclick=async()=>{for(const b of createBox.querySelectorAll('button'))b.disabled=true;const oldBox=document.querySelector('.composer');if(oldBox){for(const c of oldBox.querySelectorAll('textarea,button'))c.disabled=true;oldBox.querySelector('.native-state').textContent='正在建立新對話…';}try{const target=provider==='auto'?(window.cantusRouting?.config?.defaultTarget?.provider||'claude'):provider;const s=await postNative('create',{provider:target});await load();await select(s);}catch(e){toast(friendlyNativeError(e));const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s);}finally{for(const b of createBox.querySelectorAll('button'))b.disabled=false;}};createBox.append(button);}
+for(const provider of ['auto','codex','claude']){const button=el('button','nav',provider==='auto'?'＋ 新對話':'＋ 新 '+(provider==='codex'?'Codex':'Claude')+' 對話');button.dataset.provider=provider;button.hidden=provider!=='auto';button.onclick=async()=>{for(const b of createBox.querySelectorAll('button'))b.disabled=true;const oldBox=document.querySelector('.composer');if(oldBox){for(const c of oldBox.querySelectorAll('textarea,button'))c.disabled=true;oldBox.querySelector('.native-state').textContent='正在建立新對話…';}try{const target=provider==='auto'?(window.cantusPlatform?.providers?.[0]||'codex'):provider;const s=await postNative('create',{provider:target});await load();await select(s);}catch(e){toast(friendlyNativeError(e));const s=catalog.sessions.find(s=>s.id===selected);if(s)await select(s);}finally{for(const b of createBox.querySelectorAll('button'))b.disabled=false;}};createBox.append(button);}
 document.querySelector('.sidebar').insertBefore(createBox,document.querySelector('.sources-label'));
 async function postNative(action,body){
   const key=window.cantusPlatform?.key(body.id),generation=window.cantusPlatform?.generation;
@@ -40,7 +40,7 @@ async function postNative(action,body){
   if(key!==window.cantusPlatform?.key(body.id)||generation!==window.cantusPlatform?.generation)throw Error('已切換平台，未送出。');
   if(window.cantusPlatform?.mode==='cloud'&&window.cantusPlatform.host!=='m1'&&action==='send')body={...body,revision:Number(document.querySelector('.composer')?.dataset.labRevision)};
   const r=await (window.cantusPlatform?.fetch||fetch)('/api/native/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-Cantus-Token':csrfToken},body:JSON.stringify(body)});
-  const value=await r.json();if(!r.ok)throw Error(friendlyNativeError(value.error||'送出失敗'));return value;
+  const value=await r.json();if(!r.ok)throw Object.assign(Error(friendlyNativeError(value.error||'送出失敗')),{status:r.status,code:value.code});return value;
 }
 select=async function(s){
   const generation=++nativeSelection;
@@ -54,7 +54,7 @@ select=async function(s){
   for(const p of window.cantusPlatform?.providers||['codex','claude']){const option=el('option','',p==='codex'?'Codex':'Claude');option.value=p;providerPicker.append(option);}providerPicker.value=providerChoices.get(draftKey)||s.provider;
   const note=el('p','native-note','正在確認原生續作…'),input=el('textarea');input.placeholder='接著這段對話說…';input.setAttribute('aria-label','續聊訊息');input.maxLength=24000;input.value=drafts.get(draftKey)||'';input.oninput=()=>{drafts.set(draftKey,input.value);previewRoute();};
   const routingNote=el('p','routing-chat-note');routingNote.hidden=true;let lastRoute=null;
-  function previewRoute(){const config=window.cantusRouting?.config;if(providerPicker.value!=='auto'||!config){routingNote.hidden=true;return;}routingNote.hidden=false;const d=input.value.trim()?CantusRules.choose(config,input.value,lastRoute):lastRoute;routingNote.textContent=d?((d.provider==='codex'?'Codex':'Claude')+' · '+(d.model||'原工具設定')+' — '+d.ruleName+'；'+d.reason):'自動派工已開啟 · 輸入訊息即可預覽負責的 AI';}
+  function previewRoute(){const config=window.cantusRouting?.config,origin=s.sourceProvider||s.provider;if(providerPicker.value!=='auto'||!config){const cross=providerPicker.value&&providerPicker.value!==origin;routingNote.hidden=!cross;routingNote.textContent=cross?'切換 AI 會使用另一個原生對話接續；文字背景會交接，不會把回覆寫進原 AI 對話。':'';return;}routingNote.hidden=false;const d=input.value.trim()?CantusRules.choose(config,input.value,lastRoute):lastRoute;routingNote.textContent=d?((d.provider==='codex'?'Codex':'Claude')+' · '+(d.model||'原工具設定')+' — '+d.ruleName+'；'+d.reason):'自動派工已開啟 · 輸入訊息即可預覽負責的 AI';}
   if(window.cantusRouting)window.cantusRouting.preview=()=>{if(box.isConnected)previewRoute();};
   const actions=el('div','composer-actions'),send=el('button','send-message','送出'),stop=el('button','stop-message','停止本回合'),state=el('span','native-state',''),live=el('div','native-response'),approvals=el('div','native-approvals');live.setAttribute('aria-live','polite');
   const liveMessage=el('article','message assistant live-message'),liveHead=el('div','message-head');
@@ -82,7 +82,7 @@ select=async function(s){
   function queueTransport(){return window.cantusPlatform.capture();}
   const queueListener=()=>{if(!box.isConnected){document.removeEventListener('cantus-queue-change',queueListener);return;}renderQueue();showPending(pendingSends.get(draftKey));if(!polling&&!sending)void poll();};
   document.addEventListener('cantus-queue-change',queueListener);renderQueue();
-  const phases={idle:'',preparing:'正在接回原會話…',running:'回覆中…',approval:'等待你確認權限',completed:'已完成 · 原始記錄已更新',failed:'未完成',stopped:'已停止'};
+  const phases={idle:'',preparing:'正在接回原會話…',running:'回覆中…',approval:'等待你確認權限',completed:s.handoff?'已完成 · 接續對話記錄已更新':'已完成 · 原始記錄已更新',failed:'未完成',stopped:'已停止'};
   function renderStatus(v){
     if(v.routing){lastRoute={...v.routing,model:v.model||v.routing.model};previewRoute();}
     if(v.revision!==undefined)box.dataset.labRevision=String(v.revision);
@@ -100,14 +100,16 @@ select=async function(s){
     }}
   }
   async function poll(){
-    if(selected!==s.id||generation!==nativeSelection||!box.isConnected||polling)return;polling=true;
+    if(selected!==s.id||generation!==nativeSelection||!box.isConnected)return;if(polling){clearTimeout(nativePoll);nativePoll=setTimeout(poll,250);return;}polling=true;
     try{const requestedPending=pendingSends.get(draftKey)?.requestId,v=await api('/api/native/status?id='+encodeURIComponent(s.id));if(selected!==s.id||generation!==nativeSelection||!box.isConnected)return;
       const pending=pendingSends.get(draftKey);
+      if(pending&&pending.requestId===v.requestId&&(v.busy||v.phase==='completed')){pending.state='已送出';showPending(pending);if(optimistic)optimistic.querySelector('.delivery-state').textContent='已接收 · 正在處理';if(pending.restoredDraft&&input.value===pending.text){input.value='';drafts.delete(draftKey);}pending.restoredDraft=false;}
+      if(pending&&pending.requestId===v.requestId&&!v.busy&&v.phase==='failed'){pending.state='未完成；文字已保留';showPending(pending);}
       if(requestedPending!==pending?.requestId){nativePoll=setTimeout(poll,900);return;}
       if(pending&&pending.requestId!==v.requestId&&sending){nativePoll=setTimeout(poll,900);return;}
       if(pending&&pending.requestId===v.requestId&&!v.busy&&v.phase==='completed'){pendingSends.delete(draftKey);await load(true);if(selected===s.id&&generation===nativeSelection)await select(catalog.sessions.find(x=>x.id===s.id)||s,{background:true});}
-      else{renderStatus(v);if(v.busy||messageQueues.get(draftKey)?.items.length)nativePoll=setTimeout(poll,900);}
-    }catch(e){state.textContent='連線中斷，未自動重送。'+friendlyNativeError(e);nativePoll=setTimeout(poll,2500);}finally{polling=false;}
+      else{renderStatus(v);if(pending?.state.startsWith('送出未確認')&&pending.requestId!==v.requestId){state.textContent='尚未取得這筆送出結果，正在查詢；未自動重送。';send.disabled=true;}if(!v.busy&&!available)await checkCapability();if(v.busy||messageQueues.get(draftKey)?.items.length||!available||pending?.state.startsWith('送出未確認'))nativePoll=setTimeout(poll,v.busy?900:5000);}
+    }catch(e){state.textContent='暫時讀不到工作狀態，未自動重送。'+friendlyNativeError(e);nativePoll=setTimeout(poll,2500);}finally{polling=false;}
   }
   send.onclick=async()=>{
     const pendingActive=pendingSends.get(draftKey),awaitingStatus=pendingActive&&pendingActive.requestId!==lastStatus.requestId&&['正在送出…','已送出'].includes(pendingActive.state);
@@ -122,13 +124,13 @@ select=async function(s){
     busy=true;sending=true;send.disabled=true;input.disabled=false;providerPicker.disabled=true;state.textContent='正在送出…';
     const pending={text,requestId,at:new Date().toISOString(),state:'正在送出…'};pendingSends.set(draftKey,pending);input.value='';drafts.delete(draftKey);showPending(pending);
     try{const v=await postNative('send',{id:s.id,text,requestId,...(!providerPicker.hidden?{provider:providerPicker.value}:{})});pending.state='已送出';if(optimistic)optimistic.querySelector('.delivery-state').textContent=pending.state;renderStatus(v);poll();}
-    catch(e){pending.state='送出未確認；文字已保留，未自動重送';if(optimistic)optimistic.querySelector('.delivery-state').textContent=pending.state;state.textContent=friendlyNativeError(e)+'（未自動重送）';if(!input.value){input.value=text;drafts.set(draftKey,text);}busy=false;send.disabled=!available;input.disabled=false;providerPicker.disabled=false;}
+    catch(e){pending.state=(!e.status||e.status>=500)?'送出未確認；文字已保留，未自動重送':'送出遭拒；文字已保留，未自動重送';if(optimistic)optimistic.querySelector('.delivery-state').textContent=pending.state;state.textContent=pending.state.startsWith('送出未確認')?'未收到送出確認，正在查詢工作狀態；不代表主機離線。':friendlyNativeError(e);if(!input.value){input.value=text;drafts.set(draftKey,text);pending.restoredDraft=true;}busy=false;send.disabled=!available;input.disabled=false;providerPicker.disabled=false;clearTimeout(nativePoll);nativePoll=setTimeout(poll,0);}
     finally{sending=false;send.disabled=!available&&!busy;}
   };
   input.onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();send.click();}};
   stop.onclick=async()=>{stop.disabled=true;try{renderStatus(await postNative('stop',{id:s.id}));}catch(e){state.textContent=friendlyNativeError(e);}finally{stop.disabled=false;}};
   let capabilityRequest=0;
-  async function checkCapability(){const seq=++capabilityRequest,cap=await api('/api/native/capability?id='+encodeURIComponent(s.id)+'&provider='+providerPicker.value);if(selected!==s.id||generation!==nativeSelection||seq!==capabilityRequest)return;if(cap.routing&&!providerPicker.querySelector('option[value="auto"]')){const auto=el('option','','自動派工');auto.value='auto';providerPicker.prepend(auto);providerPicker.value=providerChoices.get(draftKey)||'auto';}available=cap.available;providerPicker.hidden=!cap.switchable;note.textContent=cap.available?cap.note:friendlyNativeError(cap.note);send.disabled=!busy&&!available;input.disabled=false;if(cap.available)$('detail').querySelector('.pill').textContent=s.handoff?'跨 AI 接續':s.managed?'面板獨立對話':'可原生續聊';previewRoute();return cap;}
+  async function checkCapability(){const seq=++capabilityRequest,cap=await api('/api/native/capability?id='+encodeURIComponent(s.id)+'&provider='+providerPicker.value);if(selected!==s.id||generation!==nativeSelection||seq!==capabilityRequest)return;if(cap.routing&&!providerPicker.querySelector('option[value="auto"]')){const current=providerPicker.value,auto=el('option','','自動派工');auto.value='auto';providerPicker.prepend(auto);providerPicker.value=current;}available=cap.available;providerPicker.hidden=!cap.switchable;note.textContent=cap.available?cap.note:friendlyNativeError(cap.note);send.disabled=sending||window.cantusPlatform?.role==='viewer'||(!busy&&!available);input.disabled=false;if(cap.available)$('detail').querySelector('.pill').textContent=s.handoff?'跨 AI 接續':s.managed?'面板獨立對話':'可原生續聊';previewRoute();return cap;}
   providerPicker.onchange=async()=>{providerChoices.set(draftKey,providerPicker.value);send.disabled=true;available=false;try{await checkCapability();}catch(e){note.textContent=friendlyNativeError(e);}};
   try{const cap=await checkCapability();if(cap?.available){$('context').append(el('label','','目前 AI 原生 Session ID'),el('p','',cap.sourceSessionId));}await poll();}catch(e){note.textContent=friendlyNativeError(e);}
 };

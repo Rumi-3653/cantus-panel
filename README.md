@@ -8,21 +8,33 @@
 
 **Work · Lineage · Live · Task（桌面新版）**
 
-[開始體驗](#開始體驗) · [畫面預覽](#畫面預覽) · [連接自己的資料](docs/SETUP.md) · [隱私與邊界](docs/PRIVACY.md)
+[六個介面](#六個介面) · [開始體驗](#開始體驗) · [畫面預覽](#畫面預覽) · [連接自己的資料](docs/SETUP.md) · [隱私與邊界](docs/PRIVACY.md)
 
 </div>
 
-![Cantus 概念展示圖：所有名稱與對話皆為虛構](docs/images/workspace-concept.png)
+## 六個介面
 
-> 上圖為 AI 製作的概念示意，不是實際操作截圖。它展示視覺方向，不代表已實作的所有細節。下方登入畫面才是真實介面截圖。
+把工作空間、對話、執行中的指示、執行紀錄、工作拆分樹與任務看板，整合進同一套 Cantus。六個介面分布在 **Work、Lineage、Live、Task** 四個桌面視角裡。
 
-## 一個地方，三種視角
-
-| 視角 | 能做的事 | 不會擅自做的事 |
+| 介面 | 你可以做什麼 | 在哪裡 |
 | --- | --- | --- |
-| **Work** | 右鍵改名、新增 Cantus 資料夾、收納未分類對話 | 不改原始標題，不搬動來源檔案 |
-| **Lineage** | 合併兩台工作站的關係圖，明確派工並保留收據 | 不從標題猜關係，不因斷線自動重送 |
-| **Live** | 查看由這個面板啟動的工作狀態 | 不掃描其他主機、不把離線當作完成 |
+| **AI Workspace · 工作空間** | 在同一個工作區切換對話、工作關係、即時動態與任務，沿用原有外框、配色與字體。 | 桌面頂端的 Work／Lineage／Live／Task |
+| **Agent Chat · 工作對話** | 閱讀 Codex、Claude 的對話，保留草稿、接續工作、確認工具權限，並把後續訊息加入排隊。 | Work 中間的對話區 |
+| **Agent Steering · 執行中指示** | 執行中補充方向、暫停、沿同一段對話繼續，或停止目前回合。Codex 支援原生插話；Claude 使用排隊。 | Work 底部的 Agent Steering |
+| **Agent Run · 執行紀錄** | 查看歷史回合、計畫、工具步驟、輸入輸出、錯誤與來源回報的用量、成本；也可請 AI 檢查並重試失敗步驟。 | Work 右側「執行紀錄」 |
+| **Agent Tree · 工作拆分樹** | 用樹狀圖整理已確認的拆分關係，收合分支、自動縮放，並直接在下拉選單搜尋起點與終點。 | Lineage 中間的工作拆分樹 |
+| **Task Board · 任務看板** | 用四欄水平看板推進工作，拖曳排序、搜尋任務，編輯狀態、優先度、負責人、標籤與說明。 | Task |
+
+進階執行控制適用桌面新版建立的本機獨立對話；原有對話沿用原後端。手機繼續使用原版介面。功能位置與操作細節見 [桌面整合說明](docs/DESKTOP.md)。
+
+## 四種桌面視角
+
+| 視角 | 日常用途 |
+| --- | --- |
+| **Work** | 對話、調整方向、查看執行紀錄，在同一頁完成。 |
+| **Lineage** | 看清楚一件工作如何拆分，以及工作之間的依賴關係。 |
+| **Live** | 中間查看工作動態，右側切換「機器」與「工作詳情」。 |
+| **Task** | 從「待處理」往右推進到「進行中」「待你確認」「已完成」，四欄隨視窗等寬縮放。 |
 
 柔和的冰藍與淡粉、乾淨的留白、可折疊的長訊息與程式碼。重要內容留在眼前，其餘細節需要時再打開。
 
@@ -44,6 +56,22 @@ npm run start:desktop
 
 ## 畫面預覽
 
+以下兩張桌面畫面是實際介面截圖，內容全部來自虛構示範資料。示範模式沒有連接帳號，也不會啟動 AI。
+
+### Task · 四欄任務看板
+
+![Cantus Task：四欄水平任務看板，顯示虛構測試任務](docs/images/desktop-task.jpg)
+
+### Work · 對話、執行中指示與執行紀錄
+
+![Cantus Work：中間為虛構對話與 Agent Steering，右側為 Agent Run 執行紀錄](docs/images/desktop-agent-run.jpg)
+
+### 視覺概念
+
+![Cantus 概念展示圖：所有名稱與對話皆為虛構](docs/images/workspace-concept.png)
+
+> 這張圖由 AI 製作，展示視覺方向；實際介面請看上方桌面截圖及下方登入截圖。
+
 ### 登入 · 桌面
 
 ![Cantus 桌面登入：空白帳密欄位與像素角色](docs/images/login-desktop.png)
@@ -63,10 +91,10 @@ npm run start:desktop
 ```bash
 git clone https://github.com/arumwu/cantus-panel.git
 cd cantus-panel
-npm start
+npm run start:desktop
 ```
 
-開啟 <http://127.0.0.1:4589>。
+開啟 <http://127.0.0.1:4591>，即可體驗六項桌面整合。原版入口仍可用 `npm start` 啟動，位於 <http://127.0.0.1:4589>。
 
 預設就是 **虛構資料示範**：兩個來源、十段虛構會話。不讀取你的帳號或歷史，不啟動 AI，不需要 API key。關係整理與規則預覽可在本機操作，產生的狀態放在不追蹤的 `state/`。
 
@@ -79,7 +107,7 @@ npm start
 ```bash
 cp config/local.example.json config/local.json
 # 編輯 config/local.json，只保留你要連接的來源與路徑。
-CANTUS_MODE=local npm start
+CANTUS_MODE=local npm run start:desktop
 ```
 
 這時可閱讀已設定的來源，AI 執行仍然關閉。完整設定、選用的登入入口、啟用執行的注意事項，見 [SETUP.md](docs/SETUP.md)。
@@ -109,6 +137,7 @@ conversation-tree.js             專案與分支
 lineage*.cjs / lineage-ui.js      工作關係
 native.cjs / managed.cjs         選用的原生執行
 handoff.cjs / routing*.cjs       對話切換與規則
+desktop/                        六項桌面介面與進階執行控制
 cloud/                          選用的獨立登入入口
 demo.cjs                        純虛構示範資料
 config/local.example.json       不含接線資料的設定範本

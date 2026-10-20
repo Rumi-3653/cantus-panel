@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  workspace.onclick=()=>workspaceSheet.showModal();
  more.onclick=()=>{permission.textContent=document.querySelector('.composer>.native-note')?.textContent||'';const editable=!!window.CantusOrganize?.editable();rename.disabled=move.disabled=!editable;infoSheet.showModal();};
  rename.onclick=()=>{const s=catalog.sessions.find(s=>s.id===selected);if(!s)return;infoSheet.close();window.CantusOrganize?.edit({title:'重新命名對話',value:name(s),action:'rename',id:s.id});};
- move.onclick=()=>{const s=catalog.sessions.find(s=>s.id===selected);if(!s)return;infoSheet.close();window.CantusOrganize?.edit({title:'移至 Weftelio 資料夾',action:'moveFolder',id:s.id,folderId:s.cantusFolder?.id});};
+ move.onclick=()=>{const s=catalog.sessions.find(s=>s.id===selected);if(!s)return;infoSheet.close();window.CantusOrganize?.edit({title:'移至 Cantus 資料夾',action:'moveFolder',id:s.id,folderId:s.cantusFolder?.id});};
  let view='list',replaying=false,historyReady=false;
  function updateHeader(){
   const picker=document.querySelector('.platform-box select');
@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  select=async(s,options={})=>{if(media.matches&&!options.background){show('chat');heading.textContent=name(s);}const result=await priorSelect(s);if(selected===s.id){compactComposer();updateHeader();}return result;};
  document.addEventListener('cantus-work-opened',()=>{if(selected)show('chat');});
  document.addEventListener('input',e=>{if(e.target.matches('.composer textarea'))fitInput(e.target);});
- // Touch-accessible menus reuse the same Weftelio-only rename and move operations.
+ // Touch-accessible menus reuse the same Cantus-only rename and move operations.
  const observer=new MutationObserver(()=>{
   if(!media.matches)return;
   for(const row of document.querySelectorAll('.conversation-row:not([data-mobile-menu])')){

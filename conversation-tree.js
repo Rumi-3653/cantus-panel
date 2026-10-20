@@ -6,7 +6,7 @@
   return '';
  }
  function project(s){
-  if(s.cantusFolder)return {key:'cantus:'+s.cantusFolder.id,name:s.cantusFolder.name,kind:'project',source:'Weftelio 資料夾 · 原始資料不變',cantusFolderId:s.cantusFolder.id,order:-1};
+  if(s.cantusFolder)return {key:'cantus:'+s.cantusFolder.id,name:s.cantusFolder.name,kind:'project',source:'Cantus 資料夾 · 原始資料不變',cantusFolderId:s.cantusFolder.id,order:-1};
   if(background(s))return {key:'background',name:'背景／測試',kind:'background',order:Infinity};
   if(s.archived)return {key:'archived',name:'已封存',kind:'archived',order:Infinity};
   if(s.projectSource==='desktop-group'||s.projectId&&s.projectName&&!s.projectSource&&s.source==='Claude Desktop')return {key:'native:'+s.provider+':'+s.projectId,name:s.projectName,kind:'project',provider:s.provider,source:'原工具專案',order:Number.isFinite(s.projectOrder)?s.projectOrder:Infinity};
@@ -18,7 +18,7 @@
  }
  function build(sessions,{query='',projects=[],folders:virtualFolders=[]}={}){
   const q=query.trim().toLowerCase(),items=new Map(),groups=new Map();
-  for(const f of virtualFolders){const key='cantus:'+f.id;groups.set(key,{key,name:f.name,kind:'project',cantusFolderId:f.id,source:'Weftelio 資料夾 · 原始資料不變',order:-1,defaultExpanded:true,explicit:true,roots:[],count:0,newest:''});}
+  for(const f of virtualFolders){const key='cantus:'+f.id;groups.set(key,{key,name:f.name,kind:'project',cantusFolderId:f.id,source:'Cantus 資料夾 · 原始資料不變',order:-1,defaultExpanded:true,explicit:true,roots:[],count:0,newest:''});}
   for(const p of projects){if(p.provider!=='codex'||p.projectSource!=='desktop-group'||!p.id)continue;const key='native:codex:'+p.id;groups.set(key,{key,name:p.name,kind:'project',provider:'codex',source:'Codex 原始專案',order:Number.isFinite(p.projectOrder)?p.projectOrder:Infinity,defaultExpanded:p.defaultExpanded===true,explicit:true,roots:[],count:0,newest:''});}
   for(const s of sessions){if(!s||typeof s.id!=='string'||items.has(s.id))continue;const p=project(s);if(!groups.has(p.key))groups.set(p.key,{...p,roots:[],count:0,newest:''});items.set(s.id,{session:s,group:p.key,children:[],parent:null,relation:s.parentRelation||'branch'});}
   for(const n of items.values()){const parent=items.get(n.session.parentId);if(parent&&parent!==n&&parent.group===n.group&&parent.session.provider===n.session.provider)n.parent=parent;}

@@ -81,10 +81,10 @@ test('手機入口沿用原版腳本與樣式，桌面入口才載入新功能',
  const phone=entry(true);assert.equal(phone.changes.length,0);assert.ok(phone.html.includes('/platform-ui.js'));assert.ok(phone.html.includes('/native-ui.js'));assert.ok(phone.html.includes('/lineage-ui.js'));assert.ok(!phone.html.includes('next-ui.js'));assert.ok(!phone.html.includes('next.css'));assert.ok(!phone.html.includes('desktop-'));
  const desktop=entry(false);assert.ok(desktop.html.includes('desktop-lineage-ui.js'));assert.ok(desktop.html.includes('next-ui.js'));assert.ok(desktop.html.includes('next.css'));
 });
-test('隨附 CSS 及手機前端 14 個檔案除品牌文字外維持去敏後基準雜湊',()=>{
+test('隨附 CSS 及手機前端 14 個檔案維持去敏後基準雜湊',()=>{
  const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'fixtures/upstream-assets.json')));
  const names=['index.html','style.css','live.css','lineage.css','platform-ui.js','app.js','native-ui.js','lineage-ui.js','live-ui.js','conversation-tree.js','routing-rules.js','routing-ui.js','pair-ui.js','organize-ui.js'];
- for(const name of names){const expected=manifest.files.find(f=>f.kind==='source'&&f.path===name);assert.ok(expected,name);let source=fs.readFileSync(path.join(__dirname,'..',name),'utf8');if(['index.html','app.js','organize-ui.js','conversation-tree.js'].includes(name))source=source.replaceAll('Weftelio','Cantus');if(name==='index.html')source=source.replace('<span class="avatar">W</span>','<span class="avatar">C</span>').replace('<span class="hero-mark">W</span>','<span class="hero-mark">C</span>');assert.equal(crypto.createHash('sha256').update(source).digest('hex'),expected.sha256,name);}
+ for(const name of names){const expected=manifest.files.find(f=>f.kind==='source'&&f.path===name);assert.ok(expected,name);assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(__dirname,'..',name))).digest('hex'),expected.sha256,name);}
 });
 test('桌面建立新版獨立對話；手機及既有對話保持原後端，不把進階指令轉送成停止',async t=>{
  const f=await setup(t);const created=await (await f.post('/api/native/create',{provider:'codex'},{'X-Cantus-Next-Desktop':'1'})).json();assert.equal(created.nextOwned,true);assert.ok(created.id.startsWith('panel_'));assert.equal(f.calls.filter(c=>c.url==='/api/native/create').length,0);

@@ -1,8 +1,8 @@
 {
-  "name": "weftelio",
+  "name": "cantus-panel",
   "version": "0.5.2",
   "private": true,
-  "description": "Weftelio — a calm workspace for Codex and Claude conversations. Portable, disconnected by default.",
+  "description": "Cantus — a calm workspace for Codex and Claude conversations. Portable, disconnected by default.",
   "license": "UNLICENSED",
   "engines": {
     "node": ">=24.0.0"

@@ -12,5 +12,5 @@ backend.once('error',error=>{console.error('Backend listener: '+error.message);p
 backend.listen(backendPort,'127.0.0.1',()=>{
  const desktop=createNextServer({upstream:'http://127.0.0.1:'+backendPort});
  desktop.once('error',error=>{console.error('Desktop listener: '+error.message);backend.close();process.exitCode=1;});
- desktop.listen(desktopPort,'127.0.0.1',()=>console.log('Weftelio desktop: http://127.0.0.1:'+desktopPort));
+ desktop.listen(desktopPort,'127.0.0.1',()=>console.log('Cantus desktop: http://127.0.0.1:'+desktopPort));
 });

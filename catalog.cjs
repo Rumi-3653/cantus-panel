@@ -17,7 +17,7 @@ function backgroundReason(s) {
   return '';
 }
 function presentCatalog(catalog, managed, includeBackground = false) {
-  const all = [...managed, ...catalog.sessions].map(s => ({...s, backgroundReason:backgroundReason(s)}));
+  const all = [...managed, ...catalog.sessions].map(s => ({...s, title:typeof s.title==='string'?s.title.slice(0,300):s.title, backgroundReason:backgroundReason(s)}));
   const hiddenCount = all.filter(s => s.backgroundReason).length;
   const sessions = includeBackground ? all : all.filter(s => !s.backgroundReason);
   return {...catalog, sessions, hiddenCount, includeBackground,

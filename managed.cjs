@@ -98,9 +98,18 @@ class ManagedRunner extends PanelRunner{
       this.write(run,{method:'initialized'});
       await this.rpc(run,'account/login/start',{type:'chatgptAuthTokens',...this.auth()});this.alive(run);
       const params={cwd:run.cwd,approvalPolicy:'untrusted',sandbox:'read-only'};
-      const result=await this.rpc(run,run.sid?'thread/resume':'thread/start',run.sid?{...params,threadId:run.sid}:params);this.alive(run);
+      // Notifications may arrive in the same stdout chunk as thread/start's reply,
+      // before its Promise continuation has bound the newly assigned thread ID.
+      run.awaitingThread=!run.sid;run.earlyThreadFrames=[];
+      let result;
+      try{result=await this.rpc(run,run.sid?'thread/resume':'thread/start',run.sid?{...params,threadId:run.sid}:params);}
+      finally{run.awaitingThread=false;}
+      this.alive(run);
       if(!result.thread?.id||run.sid&&result.thread.id!==run.sid)throw fail('對話 ID 不一致',409);
+      for(const frame of run.earlyThreadFrames){const id=frame.params?.threadId||frame.params?.thread?.id;if(id!==result.thread.id)throw fail('對話 ID 不一致',409);}
       run.sid=result.thread.id;record.sid=run.sid;this.save(record);
+      run.verifiedSession=true;
+      for(const frame of run.earlyThreadFrames.splice(0))this.frame(run,frame);
       run.verifiedSession=true;run.phase='running';this.persist(run,'sending');run.turnRequested=true;run.earlyFrames=[];
       const started=await this.rpc(run,'turn/start',{threadId:run.sid,input:[{type:'text',text}]});
       if(!started.turn?.id)throw fail('沒有收到回合 ID',409);run.turnId=started.turn.id;
@@ -112,6 +121,10 @@ class ManagedRunner extends PanelRunner{
     }
   }
   frame(run,value){
+    if(!run.finished&&run.provider==='codex'&&run.awaitingThread&&!run.sid&&value.id==null&&value.method&&(value.params?.threadId||value.params?.thread?.id)){
+      if(run.earlyThreadFrames.length>=100||Buffer.byteLength(JSON.stringify(run.earlyThreadFrames))+Buffer.byteLength(JSON.stringify(value))>2*1024*1024)throw fail('建立對話時收到過多通知',409);
+      run.earlyThreadFrames.push(value);return;
+    }
     if(run.provider==='codex'&&value.method==='account/chatgptAuthTokens/refresh'&&value.id!=null){
       try{this.write(run,{id:value.id,result:this.auth()});}catch{this.write(run,{id:value.id,error:{code:-32000,message:'Please sign in again in the original CLI.'}});}return;
     }

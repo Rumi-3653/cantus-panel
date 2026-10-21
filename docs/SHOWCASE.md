@@ -1,4 +1,6 @@
-# 展示素材
+# Cantus 展示素材
+
+`images/desktop-task.jpg`、`images/desktop-agent-run.jpg`：桌面新版的實際畫面，使用虛構示範資料，不連接帳號、不啟動 AI。
 
 `images/workspace-concept.png`：imagegen 內建工具生成，使用空白登入截圖作為色彩與氛圍參考。不是程式畫面的截圖。
 
